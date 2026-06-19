@@ -10,12 +10,14 @@ export default async function DriversPage() {
     firstName: d.firstName,
     surname: d.surname,
     nationality: d.nationality,
-    indyOnly: d.indyOnly,
-    current: d.current,
+    indyOnly: Boolean(d.indyOnly),
+    current: Boolean(d.current),
     seasons: d.seasons,
     races: d.races,
     wins: d.wins,
     podiums: d.podiums,
+    poles: d.poles,
+    fastestLaps: d.fastestLaps,
     points: d.points,
   }));
 

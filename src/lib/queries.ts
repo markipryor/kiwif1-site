@@ -88,6 +88,8 @@ export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+      COUNT(fl.grandprix_id) AS fastestLaps,
+      COUNT(CASE WHEN r.grid = '1' THEN pt.grandprix_id END) AS poles,
       SUM(${totalPts()}) AS points,
       COUNT(DISTINCT YEAR(gp.date)) AS seasons,
       MIN(YEAR(gp.date)) AS firstRace,
@@ -98,6 +100,7 @@ export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
     GROUP BY d.id
     ORDER BY wins DESC, podiums DESC
   `);

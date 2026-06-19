@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+
 export type DriversRow = {
   id: number;
   firstName: string;
@@ -13,9 +14,12 @@ export type DriversRow = {
   races: number;
   wins: number | string;
   podiums: number | string;
+  poles: number | string;
+  fastestLaps: number | string;
   points: number | string;
 };
-type SortCol = "name" | "nationality" | "seasons" | "races" | "wins" | "podiums" | "points";
+
+type SortCol = "name" | "nationality" | "seasons" | "races" | "wins" | "podiums" | "poles" | "fastestLaps" | "points";
 
 function fmt(n: number | string) {
   const v = Math.round(Number(n));
@@ -27,10 +31,29 @@ function Arrow({ col, sortCol, sortDir }: { col: SortCol; sortCol: SortCol; sort
   return <span className="text-red-400 ml-0.5">{sortDir === "desc" ? "↓" : "↑"}</span>;
 }
 
+function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+        active
+          ? "bg-red-500/20 border-red-500/40 text-red-400"
+          : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+      }`}
+    >
+      <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${active ? "bg-red-500 border-red-500" : "border-zinc-500"}`}>
+        {active && <span className="text-white text-xs leading-none">✓</span>}
+      </span>
+      {children}
+    </button>
+  );
+}
+
 export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
   const [sortCol, setSortCol] = useState<SortCol>("wins");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [showIndy, setShowIndy] = useState(false);
+  const [currentOnly, setCurrentOnly] = useState(false);
 
   function handleSort(col: SortCol) {
     if (col === sortCol) {
@@ -41,7 +64,9 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
     }
   }
 
-  const filtered = showIndy ? drivers : drivers.filter((d) => !d.indyOnly);
+  const filtered = drivers
+    .filter((d) => showIndy || !d.indyOnly)
+    .filter((d) => !currentOnly || d.current);
 
   const sorted = [...filtered].sort((a, b) => {
     let cmp: number;
@@ -69,24 +94,20 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
   }
 
   const indyCount = drivers.filter((d) => d.indyOnly).length;
+  const currentCount = drivers.filter((d) => d.current).length;
 
   return (
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-zinc-500 text-sm">{sorted.length.toLocaleString()} drivers</p>
-        <button
-          onClick={() => setShowIndy((v) => !v)}
-          className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-            showIndy
-              ? "bg-red-500/20 border-red-500/40 text-red-400"
-              : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
-          }`}
-        >
-          <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${showIndy ? "bg-red-500 border-red-500" : "border-zinc-500"}`}>
-            {showIndy && <span className="text-white text-xs leading-none">✓</span>}
-          </span>
-          Include Indy 500 drivers ({indyCount})
-        </button>
+        <div className="flex items-center gap-2">
+          <Toggle active={currentOnly} onClick={() => setCurrentOnly((v) => !v)}>
+            Current drivers only ({currentCount})
+          </Toggle>
+          <Toggle active={showIndy} onClick={() => setShowIndy((v) => !v)}>
+            Include Indy 500 ({indyCount})
+          </Toggle>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -99,6 +120,8 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
               <Th col="races" label="Races" right />
               <Th col="wins" label="Wins" right />
               <Th col="podiums" label="Podiums" right />
+              <Th col="poles" label="Poles" right />
+              <Th col="fastestLaps" label="FL" right />
               <Th col="points" label="Points" right />
             </tr>
           </thead>
@@ -123,6 +146,8 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
                   <span className={Number(d.wins) > 0 ? "text-white font-semibold" : "text-zinc-500"}>{d.wins}</span>
                 </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{d.podiums}</td>
+                <td className="py-2.5 text-zinc-400 text-right font-mono">{fmt(d.poles)}</td>
+                <td className="py-2.5 text-zinc-400 text-right font-mono">{fmt(d.fastestLaps)}</td>
                 <td className="py-2.5 text-zinc-400 text-right font-mono">{fmt(d.points)}</td>
               </tr>
             ))}

@@ -20,16 +20,17 @@ export const sections: Section[] = [
     label: "Drivers",
     tasks: [
       { id: "KF1-D-01", title: "Make columns sortable",       complexity: "S", status: "done", version: "v6.0.3beta", description: "Click column headers to sort by any stat with ascending/descending toggle." },
-      { id: "KF1-D-02", title: "Filter to current drivers",   complexity: "S", status: "pending", description: "Toggle to show only drivers active in the current season." },
+      { id: "KF1-D-02", title: "Filter to current drivers",   complexity: "S", status: "done", version: "v6.0.4beta", description: "Toggle to show only drivers active in the current season." },
       { id: "KF1-D-03", title: "Filter Indy 500 drivers out", complexity: "S", status: "done", version: "v6.0.3beta", description: "Hide drivers whose only appearances were the Indianapolis 500 rounds (1950–1960)." },
       { id: "KF1-D-05", title: "Flag icons",                  complexity: "S", status: "pending", description: "Show a nationality flag beside each driver using ISO country codes from the nationalities table." },
-      { id: "KF1-D-06", title: "Poles column",                complexity: "S", status: "pending", description: "Add a pole positions column to the drivers list." },
-      { id: "KF1-D-07", title: "Fastest laps column",         complexity: "S", status: "pending", description: "Add a fastest laps column to the drivers list." },
+      { id: "KF1-D-06", title: "Poles column",                complexity: "S", status: "done", version: "v6.0.4beta", description: "Add a pole positions column to the drivers list." },
+      { id: "KF1-D-07", title: "Fastest laps column",         complexity: "S", status: "done", version: "v6.0.4beta", description: "Add a fastest laps column to the drivers list." },
       { id: "KF1-D-08", title: "Champion icons",              complexity: "S", status: "pending", description: "Show a visual indicator beside drivers who have won a World Championship." },
       { id: "KF1-D-09", title: "Championships count",         complexity: "S", status: "pending", description: "Show the number of World Championships won on the drivers list and detail pages." },
       { id: "KF1-D-10", title: "Ranks to statistics",         complexity: "S", status: "pending", description: "Show each driver's all-time rank for wins, podiums, points, poles, and fastest laps." },
       { id: "KF1-D-11", title: "Milestones",                  complexity: "M", status: "pending", description: "Highlight career milestones (100th start, maiden win, first pole, etc.) on the driver detail page." },
       { id: "KF1-D-12", title: "Full results breakdown",      complexity: "M", status: "pending", description: "Race-by-race results table on the driver detail page showing every start with grid, finish, points, and notes." },
+      { id: "KF1-D-BUG-01", title: "Bug: Spurious 0s after driver names", complexity: "S", status: "done", version: "v6.0.4beta", description: "MySQL returns tinyint(1) fields as 0/1 numbers; JSX short-circuit {0 && <span>} renders a literal 0. Fixed by coercing to Boolean() in page.tsx map." },
     ],
   },
   {
@@ -71,6 +72,14 @@ export const sections: Section[] = [
 
 export const deployed: { version: string; changes: string[] }[] = [
   {
+    version: "v6.0.4beta",
+    changes: [
+      "Drivers: Poles and Fastest Laps columns added",
+      "Drivers: Current drivers filter toggle (default: all)",
+      "Drivers: Fixed spurious 0s appearing after driver name badges",
+    ],
+  },
+  {
     version: "v6.0.3beta",
     changes: [
       "Drivers: Sortable columns (click any header to sort)",
@@ -95,6 +104,10 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-D-02", title: "Filter to current drivers", version: "v6.0.4beta" },
+  { id: "KF1-D-06", title: "Poles column", version: "v6.0.4beta" },
+  { id: "KF1-D-07", title: "Fastest laps column", version: "v6.0.4beta" },
+  { id: "KF1-D-BUG-01", title: "Bug: Spurious 0s after driver names", version: "v6.0.4beta" },
   { id: "KF1-D-01", title: "Make columns sortable", version: "v6.0.3beta" },
   { id: "KF1-D-03", title: "Filter Indy 500 drivers out", version: "v6.0.3beta" },
   { id: "KF1-D-04", title: "Add page footer", version: "v6.00beta" },
