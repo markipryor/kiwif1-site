@@ -1,20 +1,28 @@
 const fs = require('fs');
 const path = require('path');
+const root = path.join(__dirname, '..');
 
-const comparisonsDir = path.join(__dirname, '..', 'out', 'comparisons');
-const backupDir = path.join(__dirname, '..', '_comparisons_bak');
-const flagFile = path.join(__dirname, '..', '.comparisons_cached');
+// Each entry: out dir to preserve, flag file to write, regex to identify a valid subdir ID
+const CACHED = [
+  { dir: 'comparisons', flag: '.comparisons_cached', pattern: /^\d+-vs-\d+$/ },
+  { dir: 'races',       flag: '.races_cached',       pattern: /^\d+$/ },
+  { dir: 'constructors', flag: '.constructors_cached', pattern: /^\d+$/ },
+];
 
-if (fs.existsSync(comparisonsDir)) {
-  console.log('[prebuild] Backing up comparison pages...');
-  if (fs.existsSync(backupDir)) fs.rmSync(backupDir, { recursive: true });
-  fs.cpSync(comparisonsDir, backupDir, { recursive: true });
-  // Store one valid pair so generateStaticParams can satisfy the static export requirement
-  // without querying the DB or generating all 5000+ pages
-  const entries = fs.readdirSync(backupDir);
-  const firstPair = entries.find((d) => /^\d+-vs-\d+$/.test(d));
-  fs.writeFileSync(flagFile, firstPair || '');
-  console.log(`[prebuild] Done — will generate only 1 comparison page and restore the rest from backup.`);
-} else {
-  console.log('[prebuild] No existing comparison pages — will generate from scratch.');
+for (const { dir, flag, pattern } of CACHED) {
+  const outDir  = path.join(root, 'out', dir);
+  const bakDir  = path.join(root, `_${dir}_bak`);
+  const flagFile = path.join(root, flag);
+
+  if (fs.existsSync(outDir)) {
+    console.log(`[prebuild] Backing up ${dir} pages...`);
+    if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true });
+    fs.cpSync(outDir, bakDir, { recursive: true });
+    const entries = fs.readdirSync(bakDir);
+    const first = entries.find((d) => pattern.test(d));
+    fs.writeFileSync(flagFile, first || '');
+    console.log(`[prebuild] ${dir}: cached — will generate 1 page and restore the rest.`);
+  } else {
+    console.log(`[prebuild] ${dir}: no existing pages — will generate from scratch.`);
+  }
 }

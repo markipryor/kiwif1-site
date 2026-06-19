@@ -42,6 +42,10 @@ next-env.d.ts
 
 # build helpers
 _comparisons_bak/
+_races_bak/
+_constructors_bak/
 .comparisons_cached
+.races_cached
+.constructors_cached
 
 .vercel
