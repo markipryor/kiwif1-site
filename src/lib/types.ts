@@ -7,6 +7,7 @@ export interface Driver {
   dateOfBirth: string;
   dateOfDeath: string | null;
   carNo: string | null;
+  indyOnly: boolean;
   current: boolean;
 }
 

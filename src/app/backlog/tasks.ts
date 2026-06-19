@@ -19,9 +19,9 @@ export const sections: Section[] = [
   {
     label: "Drivers",
     tasks: [
-      { id: "KF1-D-01", title: "Make columns sortable",       complexity: "S", status: "pending", description: "Click column headers to sort by any stat with ascending/descending toggle." },
+      { id: "KF1-D-01", title: "Make columns sortable",       complexity: "S", status: "done", version: "v6.0.3beta", description: "Click column headers to sort by any stat with ascending/descending toggle." },
       { id: "KF1-D-02", title: "Filter to current drivers",   complexity: "S", status: "pending", description: "Toggle to show only drivers active in the current season." },
-      { id: "KF1-D-03", title: "Filter Indy 500 drivers out", complexity: "S", status: "pending", description: "Hide drivers whose only appearances were the Indianapolis 500 rounds (1950–1960)." },
+      { id: "KF1-D-03", title: "Filter Indy 500 drivers out", complexity: "S", status: "done", version: "v6.0.3beta", description: "Hide drivers whose only appearances were the Indianapolis 500 rounds (1950–1960)." },
       { id: "KF1-D-05", title: "Flag icons",                  complexity: "S", status: "pending", description: "Show a nationality flag beside each driver using ISO country codes from the nationalities table." },
       { id: "KF1-D-06", title: "Poles column",                complexity: "S", status: "pending", description: "Add a pole positions column to the drivers list." },
       { id: "KF1-D-07", title: "Fastest laps column",         complexity: "S", status: "pending", description: "Add a fastest laps column to the drivers list." },
@@ -71,6 +71,13 @@ export const sections: Section[] = [
 
 export const deployed: { version: string; changes: string[] }[] = [
   {
+    version: "v6.0.3beta",
+    changes: [
+      "Drivers: Sortable columns (click any header to sort)",
+      "Drivers: Indy 500 filter — excluded by default, toggle to include",
+    ],
+  },
+  {
     version: "v6.0.1beta",
     changes: [
       "Records: Added 2026 points system column to Most Points table",
@@ -88,5 +95,7 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-D-01", title: "Make columns sortable", version: "v6.0.3beta" },
+  { id: "KF1-D-03", title: "Filter Indy 500 drivers out", version: "v6.0.3beta" },
   { id: "KF1-D-04", title: "Add page footer", version: "v6.00beta" },
 ];

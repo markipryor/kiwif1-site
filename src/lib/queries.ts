@@ -82,7 +82,7 @@ function sprintPts2026(s = "s") {
 export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
   return query<Driver & DriverStats>(`
     SELECT
-      d.id, d.firstName, d.surname, d.carNo, d.current,
+      d.id, d.firstName, d.surname, d.carNo, d.indyOnly, d.current,
       d.dateOfBirth, d.dateOfDeath,
       n.adjective AS nationality, n.shortcode AS nationalityCode,
       COUNT(DISTINCT r.grandprix_id) AS races,
