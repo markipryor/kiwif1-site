@@ -1,8 +1,15 @@
+import fs from "fs";
+import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllTeammatePairs, getDriverById, getTeammateComparison } from "@/lib/queries";
 
 export async function generateStaticParams() {
+  const flagFile = path.join(process.cwd(), ".comparisons_cached");
+  if (fs.existsSync(flagFile)) {
+    const pair = fs.readFileSync(flagFile, "utf8").trim();
+    return pair ? [{ pair }] : [];
+  }
   const pairs = await getAllTeammatePairs();
   return pairs.map((p) => ({ pair: `${p.driverAId}-vs-${p.driverBId}` }));
 }
