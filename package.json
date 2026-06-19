@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build && node -e \"const fs=require('fs');fs.mkdirSync('out/.vercel',{recursive:true});fs.copyFileSync('.vercel/project.json','out/.vercel/project.json');\"",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "mysql2": "^3.22.5",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
