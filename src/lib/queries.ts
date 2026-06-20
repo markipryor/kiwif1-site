@@ -77,6 +77,41 @@ function sprintPts2026(s = "s") {
   END`;
 }
 
+// ─── Championships ────────────────────────────────────────────────────────────
+
+export async function getAllChampionships(): Promise<{ driverId: number; championships: number }[]> {
+  return query<{ driverId: number; championships: number }>(`
+    WITH season_pts AS (
+      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
+      FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
+      GROUP BY YEAR(gp.date), r.driver_id
+    )
+    SELECT sp.driver_id AS driverId, COUNT(*) AS championships
+    FROM season_pts sp
+    WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
+    GROUP BY sp.driver_id
+  `);
+}
+
+export async function getDriverChampionships(driverId: number): Promise<number> {
+  const rows = await query<{ championships: number }>(`
+    WITH season_pts AS (
+      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
+      FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
+      GROUP BY YEAR(gp.date), r.driver_id
+    ),
+    season_winners AS (
+      SELECT sp.year, sp.driver_id
+      FROM season_pts sp
+      WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
+    )
+    SELECT COUNT(*) AS championships
+    FROM season_winners
+    WHERE driver_id = ?
+  `, [driverId]);
+  return Number(rows[0]?.championships ?? 0);
+}
+
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 
 export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import "flag-icons/css/flag-icons.min.css";
 import Nav from "@/components/Nav";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span>© {new Date().getFullYear()} Mark Pryor</span>
               <a href="mailto:markpryor@gmail.com" className="hover:text-white transition-colors">markpryor@gmail.com</a>
             </div>
-            <span className="text-zinc-600 text-xs font-mono">v6.0.4beta</span>
+            <span className="text-zinc-600 text-xs font-mono">v6.0.5beta</span>
           </div>
         </footer>
       </body>

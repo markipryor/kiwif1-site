@@ -8,8 +8,10 @@ export type DriversRow = {
   firstName: string;
   surname: string;
   nationality: string;
+  nationalityCode: string;
   indyOnly: boolean;
   current: boolean;
+  championships: number;
   seasons: number;
   races: number;
   wins: number | string;
@@ -19,7 +21,7 @@ export type DriversRow = {
   points: number | string;
 };
 
-type SortCol = "name" | "nationality" | "seasons" | "races" | "wins" | "podiums" | "poles" | "fastestLaps" | "points";
+type SortCol = "name" | "nationality" | "championships" | "seasons" | "races" | "wins" | "podiums" | "poles" | "fastestLaps" | "points";
 
 function fmt(n: number | string) {
   const v = Math.round(Number(n));
@@ -46,6 +48,15 @@ function Toggle({ active, onClick, children }: { active: boolean; onClick: () =>
       </span>
       {children}
     </button>
+  );
+}
+
+function Stars({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="text-amber-400 text-xs leading-none shrink-0" title={`${count}× World Champion`}>
+      {"★".repeat(count)}
+    </span>
   );
 }
 
@@ -115,7 +126,8 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
           <thead>
             <tr className="border-b border-zinc-800">
               <Th col="name" label="Driver" />
-              <Th col="nationality" label="Nationality" />
+              <Th col="nationality" label="Nat" />
+              <Th col="championships" label="★" right />
               <Th col="seasons" label="Seasons" right />
               <Th col="races" label="Races" right />
               <Th col="wins" label="Wins" right />
@@ -129,17 +141,29 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
             {sorted.map((d) => (
               <tr key={d.id} className="hover:bg-zinc-900/60 transition-colors">
                 <td className="py-2.5">
-                  <Link href={`/drivers/${d.id}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                    {d.firstName} {d.surname}
-                  </Link>
-                  {d.current && (
-                    <span className="ml-2 text-xs bg-green-900/50 text-green-400 border border-green-700/40 px-1.5 py-0.5 rounded">Current</span>
-                  )}
-                  {d.indyOnly && (
-                    <span className="ml-2 text-xs bg-zinc-800 text-zinc-500 border border-zinc-700 px-1.5 py-0.5 rounded">Indy</span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Stars count={d.championships} />
+                    <Link href={`/drivers/${d.id}/`} className="text-white font-medium hover:text-red-400 transition-colors">
+                      {d.firstName} {d.surname}
+                    </Link>
+                    {d.current && (
+                      <span className="text-xs bg-green-900/50 text-green-400 border border-green-700/40 px-1.5 py-0.5 rounded">Current</span>
+                    )}
+                    {d.indyOnly && (
+                      <span className="text-xs bg-zinc-800 text-zinc-500 border border-zinc-700 px-1.5 py-0.5 rounded">Indy</span>
+                    )}
+                  </div>
                 </td>
-                <td className="py-2.5 text-zinc-400">{d.nationality}</td>
+                <td className="py-2.5">
+                  <span
+                    className={`fi fi-${d.nationalityCode.toLowerCase()} fis`}
+                    title={d.nationality}
+                    style={{ fontSize: "1.25rem" }}
+                  />
+                </td>
+                <td className="py-2.5 text-amber-400 text-right font-mono text-xs">
+                  {d.championships > 0 ? d.championships : ""}
+                </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{d.seasons}</td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{d.races}</td>
                 <td className="py-2.5 text-right font-mono">

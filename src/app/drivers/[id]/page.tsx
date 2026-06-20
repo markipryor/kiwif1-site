@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates } from "@/lib/queries";
+import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships } from "@/lib/queries";
 
 export async function generateStaticParams() {
   const drivers = await getAllDrivers();
@@ -16,18 +16,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DriverPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [driver, seasons, teammates] = await Promise.all([
+  const [driver, seasons, teammates, championships] = await Promise.all([
     getDriverById(Number(id)),
     getDriverSeasons(Number(id)),
     getDriverTeammates(Number(id)),
+    getDriverChampionships(Number(id)),
   ]);
 
   if (!driver) notFound();
 
   const stats = [
+    ...(championships > 0 ? [{ label: "Championships", value: `${"★".repeat(championships)} ${championships}` }] : []),
     { label: "Races", value: driver.races },
     { label: "Wins", value: driver.wins },
     { label: "Podiums", value: driver.podiums },
+    { label: "Poles", value: driver.poles },
+    { label: "Fastest Laps", value: driver.fastestLaps },
     { label: "Points", value: Number(driver.points).toFixed(0) },
     { label: "Seasons", value: driver.seasons },
     { label: "First race", value: driver.firstRace },

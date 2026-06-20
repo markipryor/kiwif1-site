@@ -1,17 +1,21 @@
-import { getAllDrivers } from "@/lib/queries";
+import { getAllDrivers, getAllChampionships } from "@/lib/queries";
 import DriversTable from "./DriversTable";
 
 export const metadata = { title: "Drivers — KiwiF1" };
 
 export default async function DriversPage() {
-  const raw = await getAllDrivers();
+  const [raw, champRows] = await Promise.all([getAllDrivers(), getAllChampionships()]);
+  const champMap = new Map(champRows.map((c) => [c.driverId, Number(c.championships)]));
+
   const drivers = raw.map((d) => ({
     id: d.id,
     firstName: d.firstName,
     surname: d.surname,
     nationality: d.nationality,
+    nationalityCode: d.nationalityCode,
     indyOnly: Boolean(d.indyOnly),
     current: Boolean(d.current),
+    championships: champMap.get(d.id) ?? 0,
     seasons: d.seasons,
     races: d.races,
     wins: d.wins,
