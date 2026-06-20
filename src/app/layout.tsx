@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import "flag-icons/css/flag-icons.min.css";
 import Nav from "@/components/Nav";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -14,6 +13,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css" />
+      </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-white antialiased">
         <Nav />
         <main className="flex-1 pt-16">{children}</main>
