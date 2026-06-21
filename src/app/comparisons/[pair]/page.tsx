@@ -38,16 +38,16 @@ export default async function ComparisonPage({ params }: { params: Promise<{ pai
 
   const totals = seasons.reduce(
     (acc, s) => ({
-      aRaces: acc.aRaces + Number(s.aRaces),
       aWins: acc.aWins + Number(s.aWins),
       aPodiums: acc.aPodiums + Number(s.aPodiums),
       aPoints: acc.aPoints + Number(s.aPoints),
-      bRaces: acc.bRaces + Number(s.bRaces),
+      aQualiAhead: acc.aQualiAhead + Number(s.aQualiAhead),
       bWins: acc.bWins + Number(s.bWins),
       bPodiums: acc.bPodiums + Number(s.bPodiums),
       bPoints: acc.bPoints + Number(s.bPoints),
+      bQualiAhead: acc.bQualiAhead + Number(s.bQualiAhead),
     }),
-    { aRaces: 0, aWins: 0, aPodiums: 0, aPoints: 0, bRaces: 0, bWins: 0, bPodiums: 0, bPoints: 0 }
+    { aWins: 0, aPodiums: 0, aPoints: 0, aQualiAhead: 0, bWins: 0, bPodiums: 0, bPoints: 0, bQualiAhead: 0 }
   );
 
   const nameA = `${driverA.firstName} ${driverA.surname}`;
@@ -89,10 +89,10 @@ export default async function ComparisonPage({ params }: { params: Promise<{ pai
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8 space-y-4">
         <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-4">Overall (as teammates)</h2>
         {[
-          { label: "Races", a: totals.aRaces, b: totals.bRaces },
           { label: "Wins", a: totals.aWins, b: totals.bWins },
           { label: "Podiums", a: totals.aPodiums, b: totals.bPodiums },
           { label: "Points", a: Math.round(totals.aPoints), b: Math.round(totals.bPoints) },
+          { label: "Qualifying", a: totals.aQualiAhead, b: totals.bQualiAhead },
         ].map((row) => (
           <div key={row.label} className="flex items-center gap-4">
             <span className="text-zinc-500 text-xs w-16">{row.label}</span>
@@ -112,10 +112,10 @@ export default async function ComparisonPage({ params }: { params: Promise<{ pai
             </div>
             <div className="space-y-3">
               {[
-                { label: "Races", a: Number(s.aRaces), b: Number(s.bRaces) },
                 { label: "Wins", a: Number(s.aWins), b: Number(s.bWins) },
                 { label: "Podiums", a: Number(s.aPodiums), b: Number(s.bPodiums) },
                 { label: "Points", a: Math.round(Number(s.aPoints)), b: Math.round(Number(s.bPoints)) },
+                { label: "Qualifying", a: Number(s.aQualiAhead), b: Number(s.bQualiAhead) },
               ].map((row) => (
                 <div key={row.label} className="flex items-center gap-4">
                   <span className="text-zinc-500 text-xs w-16">{row.label}</span>

@@ -12,6 +12,7 @@ export function getPool(): mysql.Pool {
       database: process.env.DB_NAME ?? "kiwif1",
       waitForConnections: true,
       connectionLimit: 10,
+      dateStrings: true,
     });
   }
   return pool;

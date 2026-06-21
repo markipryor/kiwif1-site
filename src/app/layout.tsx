@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
       <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css" />
+        <link rel="stylesheet" href="/flag-icons/css/flag-icons.min.css" />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-white antialiased">
         <Nav />
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span>© {new Date().getFullYear()} Mark Pryor</span>
               <a href="mailto:markpryor@gmail.com" className="hover:text-white transition-colors">markpryor@gmail.com</a>
             </div>
-            <span className="text-zinc-600 text-xs font-mono">v6.0.5beta</span>
+            <span className="text-zinc-600 text-xs font-mono">v6.0.6beta</span>
           </div>
         </footer>
       </body>

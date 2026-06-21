@@ -2,6 +2,20 @@ const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..');
 
+// Copy flag-icons assets from node_modules to public/ so they're included in out/
+const flagIconsSrc = path.join(root, 'node_modules', 'flag-icons');
+if (fs.existsSync(flagIconsSrc)) {
+  const destDir = path.join(root, 'public', 'flag-icons');
+  if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true });
+  fs.mkdirSync(path.join(destDir, 'css'), { recursive: true });
+  fs.copyFileSync(
+    path.join(flagIconsSrc, 'css', 'flag-icons.min.css'),
+    path.join(destDir, 'css', 'flag-icons.min.css')
+  );
+  fs.cpSync(path.join(flagIconsSrc, 'flags'), path.join(destDir, 'flags'), { recursive: true });
+  console.log('[prebuild] Copied flag-icons to public/.');
+}
+
 // Each entry: out dir to preserve, flag file to write, regex to identify a valid subdir ID
 const CACHED = [
   { dir: 'comparisons', flag: '.comparisons_cached', pattern: /^\d+-vs-\d+$/ },

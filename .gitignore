@@ -47,5 +47,6 @@ _constructors_bak/
 .comparisons_cached
 .races_cached
 .constructors_cached
+public/flag-icons/
 
 .vercel

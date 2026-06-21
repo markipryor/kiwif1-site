@@ -118,8 +118,8 @@ export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
   return query<Driver & DriverStats>(`
     SELECT
       d.id, d.firstName, d.surname, d.carNo, d.indyOnly, d.current,
-      d.dateOfBirth, d.dateOfDeath,
-      n.adjective AS nationality, n.shortcode AS nationalityCode,
+      d.dateOfBirth, CASE WHEN d.dateOfDeath IN ('0000-00-00', '1970-01-01') THEN NULL ELSE d.dateOfDeath END AS dateOfDeath,
+      n.adjective AS nationality, n.iso2 AS nationalityCode,
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
@@ -144,12 +144,14 @@ export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
 export async function getDriverById(id: number): Promise<(Driver & DriverStats) | null> {
   const rows = await query<Driver & DriverStats>(`
     SELECT
-      d.id, d.firstName, d.surname, d.carNo, d.current,
-      d.dateOfBirth, d.dateOfDeath,
-      n.adjective AS nationality, n.shortcode AS nationalityCode,
+      d.id, d.firstName, d.surname, d.carNo, d.indyOnly, d.current,
+      d.dateOfBirth, CASE WHEN d.dateOfDeath IN ('0000-00-00', '1970-01-01') THEN NULL ELSE d.dateOfDeath END AS dateOfDeath,
+      n.adjective AS nationality, n.iso2 AS nationalityCode,
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+      COUNT(fl.grandprix_id) AS fastestLaps,
+      COUNT(CASE WHEN r.grid = '1' THEN pt.grandprix_id END) AS poles,
       SUM(${totalPts()}) AS points,
       COUNT(DISTINCT YEAR(gp.date)) AS seasons,
       MIN(YEAR(gp.date)) AS firstRace,
@@ -160,6 +162,7 @@ export async function getDriverById(id: number): Promise<(Driver & DriverStats) 
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
     WHERE d.id = ?
     GROUP BY d.id
   `, [id]);
@@ -173,7 +176,7 @@ export async function getDriverSeasons(driverId: number) {
   }>(`
     SELECT
       YEAR(gp.date) AS year,
-      c.name AS constructor,
+      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
       c.id AS constructorId,
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
@@ -564,7 +567,7 @@ export async function getTeammateComparison(driverAId: number, driverBId: number
   return query<SharedSeason>(`
     SELECT
       YEAR(gp.date) AS year,
-      c.name AS constructor,
+      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
       c.id AS constructorId,
       SUM(CASE WHEN r1.driver_id = ? THEN 1 ELSE 0 END) AS aRaces,
       SUM(CASE WHEN r1.driver_id = ? AND r1.place = '1' THEN 1 ELSE 0 END) AS aWins,
@@ -573,7 +576,9 @@ export async function getTeammateComparison(driverAId: number, driverBId: number
       SUM(CASE WHEN r1.driver_id = ? THEN 1 ELSE 0 END) AS bRaces,
       SUM(CASE WHEN r1.driver_id = ? AND r1.place = '1' THEN 1 ELSE 0 END) AS bWins,
       SUM(CASE WHEN r1.driver_id = ? AND r1.place IN ('1','2','3') THEN 1 ELSE 0 END) AS bPodiums,
-      SUM(CASE WHEN r1.driver_id = ? THEN (${rp}) + (${fl}) + (${sp}) ELSE 0 END) AS bPoints
+      SUM(CASE WHEN r1.driver_id = ? THEN (${rp}) + (${fl}) + (${sp}) ELSE 0 END) AS bPoints,
+      SUM(CASE WHEN r1.driver_id = ? AND CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 AND CAST(r1.grid AS UNSIGNED) < CAST(r2.grid AS UNSIGNED) THEN 1 ELSE 0 END) AS aQualiAhead,
+      SUM(CASE WHEN r1.driver_id = ? AND CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 AND CAST(r1.grid AS UNSIGNED) < CAST(r2.grid AS UNSIGNED) THEN 1 ELSE 0 END) AS bQualiAhead
     FROM results r1
     JOIN results r2
       ON r2.entrant_id = r1.entrant_id
@@ -591,6 +596,7 @@ export async function getTeammateComparison(driverAId: number, driverBId: number
   `, [
     driverAId, driverAId, driverAId, driverAId,
     driverBId, driverBId, driverBId, driverBId,
+    driverAId, driverBId,
     driverAId, driverBId, driverAId, driverBId,
   ]);
 }

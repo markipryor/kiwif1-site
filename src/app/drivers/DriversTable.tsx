@@ -125,9 +125,9 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
+              <Th col="championships" label="★" right />
               <Th col="name" label="Driver" />
               <Th col="nationality" label="Nat" />
-              <Th col="championships" label="★" right />
               <Th col="seasons" label="Seasons" right />
               <Th col="races" label="Races" right />
               <Th col="wins" label="Wins" right />
@@ -140,9 +140,11 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
           <tbody className="divide-y divide-zinc-800/60">
             {sorted.map((d) => (
               <tr key={d.id} className="hover:bg-zinc-900/60 transition-colors">
+                <td className="py-2.5 text-amber-400 text-right font-mono text-xs pr-2">
+                  {d.championships > 0 ? "★".repeat(d.championships) : ""}
+                </td>
                 <td className="py-2.5">
                   <div className="flex items-center gap-1.5">
-                    <Stars count={d.championships} />
                     <Link href={`/drivers/${d.id}/`} className="text-white font-medium hover:text-red-400 transition-colors">
                       {d.firstName} {d.surname}
                     </Link>
@@ -160,9 +162,6 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
                     title={d.nationality}
                     style={{ fontSize: "1.25rem" }}
                   />
-                </td>
-                <td className="py-2.5 text-amber-400 text-right font-mono text-xs">
-                  {d.championships > 0 ? d.championships : ""}
                 </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{d.seasons}</td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{d.races}</td>

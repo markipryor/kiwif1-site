@@ -102,10 +102,12 @@ export interface SharedSeason {
   aWins: number;
   aPodiums: number;
   aPoints: number;
+  aQualiAhead: number;
   aBestFinish: number | null;
   bRaces: number;
   bWins: number;
   bPodiums: number;
   bPoints: number;
+  bQualiAhead: number;
   bBestFinish: number | null;
 }

@@ -26,7 +26,7 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
   if (!driver) notFound();
 
   const stats = [
-    ...(championships > 0 ? [{ label: "Championships", value: `${"★".repeat(championships)} ${championships}` }] : []),
+    ...(championships > 0 ? [{ label: "Championships", value: "★".repeat(championships) }] : []),
     { label: "Races", value: driver.races },
     { label: "Wins", value: driver.wins },
     { label: "Podiums", value: driver.podiums },
@@ -45,14 +45,25 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
       </Link>
 
       <div className="mt-6 mb-10">
-        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">{driver.nationality}</p>
-        <h1 className="text-4xl font-bold text-white">
+        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+          {driver.nationalityCode && (
+            <span className={`fi fi-${driver.nationalityCode.toLowerCase()} fis`} title={driver.nationality} style={{ fontSize: "1rem" }} />
+          )}
+          {driver.nationality}
+        </p>
+        <h1 className="text-4xl font-bold text-white flex items-center gap-3 flex-wrap">
           {driver.firstName} {driver.surname}
+          {Boolean(driver.current) && (
+            <span className="text-sm bg-green-900/50 text-green-400 border border-green-700/40 px-2 py-1 rounded">Current</span>
+          )}
+          {Boolean(driver.indyOnly) && (
+            <span className="text-sm bg-zinc-800 text-zinc-500 border border-zinc-700 px-2 py-1 rounded">Indy 500 only</span>
+          )}
         </h1>
         {driver.dateOfBirth && (
           <p className="text-zinc-500 text-sm mt-1">
             b. {new Date(driver.dateOfBirth).toLocaleDateString("en-NZ", { year: "numeric", month: "long", day: "numeric" })}
-            {driver.dateOfDeath && ` — d. ${new Date(driver.dateOfDeath).toLocaleDateString("en-NZ", { year: "numeric", month: "long", day: "numeric" })}`}
+            {driver.dateOfDeath && driver.dateOfDeath !== "0000-00-00" && ` — d. ${new Date(driver.dateOfDeath).toLocaleDateString("en-NZ", { year: "numeric", month: "long", day: "numeric" })}`}
           </p>
         )}
       </div>
