@@ -21,6 +21,8 @@ export interface DriverStats {
   seasons: number;
   firstRace: number;
   lastRace: number;
+  firstRaceTitle?: string | null;
+  lastRaceTitle?: string | null;
 }
 
 export interface Constructor {

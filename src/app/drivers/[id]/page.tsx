@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships } from "@/lib/queries";
+import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions } from "@/lib/queries";
 
 export async function generateStaticParams() {
   const drivers = await getAllDrivers();
@@ -16,17 +16,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DriverPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [driver, seasons, teammates, championships] = await Promise.all([
+  const [driver, seasons, teammates, championships, seasonPositions] = await Promise.all([
     getDriverById(Number(id)),
     getDriverSeasons(Number(id)),
     getDriverTeammates(Number(id)),
     getDriverChampionships(Number(id)),
+    getDriverSeasonPositions(Number(id)),
   ]);
+  const posMap = new Map(seasonPositions.map((p) => [p.year, p.champPos]));
 
   if (!driver) notFound();
 
   const stats = [
-    ...(championships > 0 ? [{ label: "Championships", value: "★".repeat(championships) }] : []),
     { label: "Races", value: driver.races },
     { label: "Wins", value: driver.wins },
     { label: "Podiums", value: driver.podiums },
@@ -34,9 +35,11 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
     { label: "Fastest Laps", value: driver.fastestLaps },
     { label: "Points", value: Number(driver.points).toFixed(0) },
     { label: "Seasons", value: driver.seasons },
-    { label: "First race", value: driver.firstRace },
-    { label: "Last race", value: driver.lastRace },
   ];
+
+  const champStars = championships > 4
+    ? <span className="inline-flex flex-col items-center leading-tight"><span>{"★".repeat(Math.ceil(championships / 2))}</span><span>{"★".repeat(Math.floor(championships / 2))}</span></span>
+    : <span>{"★".repeat(championships)}</span>;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
@@ -69,13 +72,27 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Career stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-12">
+      {championships > 0 && (
+        <div className="mb-4 bg-amber-900/20 border border-amber-700/30 rounded-xl px-6 py-4 text-center">
+          <div className="text-amber-400 text-2xl leading-tight">{champStars}</div>
+          <p className="text-amber-500/70 text-xs mt-1">{championships}× World Champion</p>
+        </div>
+      )}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
         {stats.map((s) => (
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-center">
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
           </div>
         ))}
+      </div>
+      <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm text-zinc-500 mb-12">
+        {driver.firstRaceTitle && (
+          <span><span className="text-zinc-600">First race:</span> {driver.firstRaceTitle} ({driver.firstRace})</span>
+        )}
+        {driver.lastRaceTitle && (
+          <span><span className="text-zinc-600">{Boolean(driver.current) ? "Latest race:" : "Last race:"}</span> {driver.lastRaceTitle} ({driver.lastRace})</span>
+        )}
       </div>
 
       {/* Season breakdown */}
@@ -85,7 +102,9 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
           <thead>
             <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
               <th className="pb-3 text-left">Year</th>
-              <th className="pb-3 text-left">Constructor</th>
+              <th className="pb-3 text-right">Pos</th>
+              <th className="pb-3 text-left pl-4">Constructor</th>
+              <th className="pb-3 text-left pl-4">Teammate(s)</th>
               <th className="pb-3 text-right">Races</th>
               <th className="pb-3 text-right">Wins</th>
               <th className="pb-3 text-right">Podiums</th>
@@ -93,18 +112,28 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/60">
-            {seasons.map((s) => (
+            {seasons.map((s) => {
+              const pos = posMap.get(s.year);
+              return (
               <tr key={`${s.year}-${s.constructorId}`} className="hover:bg-zinc-900/60 transition-colors">
                 <td className="py-2.5">
                   <Link href={`/seasons/${s.year}/`} className="text-white font-medium hover:text-red-400 transition-colors">
                     {s.year}
                   </Link>
                 </td>
-                <td className="py-2.5">
+                <td className="py-2.5 text-right font-mono">
+                  {pos != null ? (
+                    <span className={pos === 1 ? "text-yellow-400 font-bold" : "text-zinc-400"}>P{pos}</span>
+                  ) : (
+                    <span className="text-zinc-600">—</span>
+                  )}
+                </td>
+                <td className="py-2.5 pl-4">
                   <Link href={`/constructors/${s.constructorId}/`} className="text-zinc-400 hover:text-white transition-colors">
                     {s.constructor}
                   </Link>
                 </td>
+                <td className="py-2.5 pl-4 text-zinc-500 text-sm">{s.teammates ?? "—"}</td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
                 <td className="py-2.5 text-right font-mono">
                   <span className={Number(s.wins) > 0 ? "text-white font-semibold" : "text-zinc-500"}>{s.wins}</span>
@@ -112,7 +141,8 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.podiums}</td>
                 <td className="py-2.5 text-zinc-400 text-right font-mono">{Number(s.points).toFixed(0)}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

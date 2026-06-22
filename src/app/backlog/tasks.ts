@@ -28,19 +28,23 @@ export const sections: Section[] = [
       { id: "KF1-D-08", title: "Champion icons",              complexity: "S", status: "done", version: "v6.0.5beta", description: "Show a visual indicator beside drivers who have won a World Championship." },
       { id: "KF1-D-09", title: "Championships count",         complexity: "S", status: "done", version: "v6.0.5beta", description: "Show the number of World Championships won on the drivers list and detail pages." },
       { id: "KF1-D-10", title: "Ranks to statistics",         complexity: "S", status: "pending", description: "Show each driver's all-time rank for wins, podiums, points, poles, and fastest laps." },
-      { id: "KF1-D-BUG-02", title: "Bug: Flag icons not showing",          complexity: "S", status: "done", version: "v6.0.6beta", description: "Flag icons not displaying on the drivers list. CDN link is in layout but flags are absent — likely a CSS class or code path issue." },
       { id: "KF1-D-12", title: "Full results breakdown",      complexity: "M", status: "pending", description: "Race-by-race results table on the driver detail page showing every start with grid, finish, points, and notes." },
       { id: "KF1-D-BUG-01", title: "Bug: Spurious 0s after driver names", complexity: "S", status: "done", version: "v6.0.4beta", description: "MySQL returns tinyint(1) fields as 0/1 numbers; JSX short-circuit {0 && <span>} renders a literal 0. Fixed by coercing to Boolean() in page.tsx map." },
       { id: "KF1-D-BUG-02", title: "Bug: Flag icons not showing",          complexity: "S", status: "done", version: "v6.0.6beta", description: "Flag icons not displaying on the drivers list. CDN link is in layout but flags are absent — likely a CSS class or code path issue." },
-      { id: "KF1-D-BUG-03", title: "Bug: Senna shows 2 championships (should be 3)", complexity: "S", status: "pending", description: "Championship count query returning 2 for Senna instead of 3. Likely a points tie-break or data issue in the season_pts CTE." },
+      { id: "KF1-D-BUG-03", title: "Bug: Senna shows 2 championships (should be 3)", complexity: "S", status: "done", version: "v6.0.7beta", description: "Championship count query returning 2 for Senna instead of 3. Root cause: 1988 raw points gave Prost the win (105 vs 94); fixed by applying the 'best N results' drop rule per season via seasonPtsCTE() with window functions." },
       { id: "KF1-D-BUG-04", title: "Bug: No numbers in poles/fastest laps on driver page", complexity: "S", status: "done", version: "v6.0.6beta", description: "Poles and Fastest Laps stat cards on the individual driver page are showing blank instead of numbers." },
       { id: "KF1-D-BUG-05", title: "Bug: Death date showing for living drivers", complexity: "S", status: "done", version: "v6.0.6beta", description: "The date of death is appearing on driver detail pages for drivers who are still alive. Likely a null check issue." },
       { id: "KF1-D-FIX-01", title: "Fix: Championship stars in own left column", complexity: "S", status: "done", version: "v6.0.6beta", description: "Move championship stars to a dedicated sortable column on the left of the table, removing the separate championships count column." },
       { id: "KF1-D-FIX-02", title: "Fix: Remove number next to stars on driver page", complexity: "S", status: "done", version: "v6.0.6beta", description: "The Championships stat card shows '★★★ 3' — the number is redundant. Show stars only." },
       { id: "KF1-D-ENH-01", title: "Flag icon on driver detail page",      complexity: "S", status: "done", version: "v6.0.6beta", description: "Show the driver's nationality flag on their individual page alongside the nationality text." },
       { id: "KF1-D-ENH-02", title: "Current/Indy indicator on driver page", complexity: "S", status: "done", version: "v6.0.6beta", description: "Show a 'Current' or 'Indy' badge on the individual driver detail page header." },
-      { id: "KF1-D-ENH-03", title: "Teammates per year in season table",   complexity: "S", status: "pending", description: "On the driver detail page, show teammate name(s) alongside each season row in the season-by-season breakdown." },
-      { id: "KF1-D-ENH-04", title: "Championship position in season table", complexity: "S", status: "pending", description: "Show the driver's final championship standing (e.g. P1, P2) for each season in the season-by-season table." },
+      { id: "KF1-D-ENH-03", title: "Teammates per year in season table",   complexity: "S", status: "done", version: "v6.0.7beta", description: "On the driver detail page, show teammate name(s) alongside each season row in the season-by-season breakdown." },
+      { id: "KF1-D-ENH-04", title: "Championship position in season table", complexity: "S", status: "done", version: "v6.0.7beta", description: "Show the driver's final championship standing (e.g. P1, P2) for each season in the season-by-season table." },
+      { id: "KF1-D-BUG-06", title: "Bug: Incorrect nationality text for some drivers", complexity: "S", status: "done", version: "v6.0.8beta", description: "Some drivers show the correct flag but wrong nationality label — e.g. Leclerc shows the Monaco flag but says 'Australian'. Fixed by updating the adjective field in the nationalities table for 15 nationalities including Monaco (Monegasque), Netherlands (Dutch), Uruguay, Azerbaijan, and others." },
+      { id: "KF1-D-ENH-05", title: "Default sort by last name on drivers list", complexity: "S", status: "done", version: "v6.0.8beta", description: "Change the default sort order on the all-drivers view from wins descending to surname ascending, so drivers are listed alphabetically on first load." },
+      { id: "KF1-D-ENH-06", title: "Wrap championship stars onto two rows for 5+ titles", complexity: "S", status: "done", version: "v6.0.8beta", description: "Drivers with 5 stars (Fangio) or 7 stars (Schumacher, Hamilton) now show stars in two rows using a ceil/floor split (5→3+2, 7→4+3) on both the drivers list and driver detail page." },
+      { id: "KF1-D-ENH-07", title: "First/last race as text with full race name", complexity: "S", status: "done", version: "v6.0.8beta", description: "On the driver detail page, First race and Last race are now shown as plain text below the stat cards with the full race name and year. Current drivers show 'Latest race' instead of 'Last race'." },
+      { id: "KF1-D-ENH-08", title: "Championships box on its own row above stats", complexity: "S", status: "done", version: "v6.0.8beta", description: "On the driver detail page, the Championships banner now appears in its own amber-tinted row above the stat cards and is hidden entirely for drivers with no titles. The 7 remaining stats fit on one row." },
     ],
   },
   {
@@ -64,12 +68,15 @@ export const sections: Section[] = [
     tasks: [
       { id: "KF1-S-01", title: "Champion wins and points",   complexity: "S", status: "pending", description: "Show the champion's win count and total points alongside their name on the seasons list." },
       { id: "KF1-S-02", title: "Milestones",                 complexity: "M", status: "pending", description: "Highlight key season milestones — first win, first pole, championship clinch race, etc. on the season detail page." },
+      { id: "KF1-S-ENH-01", title: "Show championship leader for current season", complexity: "S", status: "pending", description: "The seasons list currently shows the points leader for the current season as if they are the champion. For the current (incomplete) season, label them as 'Leader' rather than treating them as champion." },
     ],
   },
   {
     label: "Comparisons",
     tasks: [
       { id: "KF1-COMP-BUG-01", title: "Bug: Comparison page lost styling",          complexity: "S", status: "done", version: "v6.0.6beta", description: "Comparison pages appear unstyled — likely caused by the cached HTML being out of date with the current CSS bundle hash after a rebuild." },
+      { id: "KF1-COMP-BUG-02", title: "Bug: Some comparison pages returning 404",   complexity: "S", status: "pending", description: "Some driver vs driver comparison pages are returning 404. May be missing from the cached set or not generated during build. Need to identify which pairs are affected and whether it's a cache gap or a generateStaticParams issue." },
+      { id: "KF1-COMP-BUG-03", title: "Bug: Comparison page styling not applied",   complexity: "S", status: "done", version: "v6.0.8beta", description: "Comparison pages were losing styling after each build because Turbopack filenames are pure hashes (no name-HASH.ext pattern), so the old hash-stripping regex never matched. Fixed by positionally replacing all /_next/static/ references in cached pages using the freshly-built comparison page as the source of truth." },
       { id: "KF1-COMP-ENH-01", title: "Remove races rows from comparison table",    complexity: "S", status: "done", version: "v6.0.6beta", description: "Remove the individual race result rows from the head-to-head table to declutter the comparison view." },
       { id: "KF1-COMP-ENH-02", title: "Add qualifying comparison",                  complexity: "S", status: "done", version: "v6.0.6beta", description: "Show qualifying head-to-head (who outqualified who and by how much) for shared seasons." },
       { id: "KF1-COMP-ENH-03", title: "Add finishing position comparison",          complexity: "S", status: "pending", description: "Show finishing position head-to-head breakdown for shared seasons." },
@@ -94,6 +101,25 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.0.8beta",
+    changes: [
+      "Drivers: Default sort changed to surname A→Z",
+      "Drivers: Championship stars wrap to two rows for 5+ titles (ceil/floor split)",
+      "Driver pages: Championship banner shown in own amber row above stats; hidden if no titles",
+      "Driver pages: First/last race shown as plain text with full race name; current drivers say 'Latest race'",
+      "Driver pages: Nationality text fixed for 15 nationalities (Monegasque, Dutch, etc.)",
+      "Comparison pages: CSS/JS hash patching fixed — positional replacement now works reliably with Turbopack",
+    ],
+  },
+  {
+    version: "v6.0.7beta",
+    changes: [
+      "Driver pages: Senna now correctly shows 3 championships (best-N-results drop rule applied)",
+      "Driver pages: Season table now shows championship position (P1, P2, etc.) per season",
+      "Driver pages: Season table now shows teammate name(s) per season",
+    ],
+  },
   {
     version: "v6.0.6beta",
     changes: [
@@ -152,6 +178,15 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-D-BUG-06", title: "Bug: Incorrect nationality text for some drivers", version: "v6.0.8beta" },
+  { id: "KF1-D-ENH-05", title: "Default sort by last name on drivers list", version: "v6.0.8beta" },
+  { id: "KF1-D-ENH-06", title: "Wrap championship stars onto two rows for 5+ titles", version: "v6.0.8beta" },
+  { id: "KF1-D-ENH-07", title: "First/last race as text with full race name", version: "v6.0.8beta" },
+  { id: "KF1-D-ENH-08", title: "Championships box on its own row above stats", version: "v6.0.8beta" },
+  { id: "KF1-COMP-BUG-03", title: "Bug: Comparison page styling not applied", version: "v6.0.8beta" },
+  { id: "KF1-D-BUG-03", title: "Bug: Senna shows 2 championships (should be 3)", version: "v6.0.7beta" },
+  { id: "KF1-D-ENH-03", title: "Teammates per year in season table", version: "v6.0.7beta" },
+  { id: "KF1-D-ENH-04", title: "Championship position in season table", version: "v6.0.7beta" },
   { id: "KF1-D-BUG-02", title: "Bug: Flag icons not showing", version: "v6.0.6beta" },
   { id: "KF1-D-BUG-04", title: "Bug: No numbers in poles/fastest laps on driver page", version: "v6.0.6beta" },
   { id: "KF1-D-BUG-05", title: "Bug: Death date showing for living drivers", version: "v6.0.6beta" },

@@ -61,8 +61,8 @@ function Stars({ count }: { count: number }) {
 }
 
 export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
-  const [sortCol, setSortCol] = useState<SortCol>("wins");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortCol, setSortCol] = useState<SortCol>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showIndy, setShowIndy] = useState(false);
   const [currentOnly, setCurrentOnly] = useState(false);
 
@@ -140,8 +140,13 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
           <tbody className="divide-y divide-zinc-800/60">
             {sorted.map((d) => (
               <tr key={d.id} className="hover:bg-zinc-900/60 transition-colors">
-                <td className="py-2.5 text-amber-400 text-right font-mono text-xs pr-2">
-                  {d.championships > 0 ? "★".repeat(d.championships) : ""}
+                <td className="py-2.5 text-amber-400 text-right font-mono text-xs pr-2 leading-tight">
+                  {d.championships > 4 ? (
+                    <span className="inline-flex flex-col items-end">
+                      <span>{"★".repeat(Math.ceil(d.championships / 2))}</span>
+                      <span>{"★".repeat(Math.floor(d.championships / 2))}</span>
+                    </span>
+                  ) : d.championships > 0 ? "★".repeat(d.championships) : ""}
                 </td>
                 <td className="py-2.5">
                   <div className="flex items-center gap-1.5">

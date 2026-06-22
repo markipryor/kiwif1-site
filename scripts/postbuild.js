@@ -7,21 +7,26 @@ const outDir = path.join(root, 'out');
 fs.mkdirSync(path.join(outDir, '.vercel'), { recursive: true });
 fs.copyFileSync(path.join(root, '.vercel', 'project.json'), path.join(outDir, '.vercel', 'project.json'));
 
-// Build a map of unhashed-name → new hashed path from the freshly built index.html
-function buildRefMap(indexHtml) {
-  const map = {};
-  const re = /\/_next\/static\/(css|chunks)\/([^"'\s]+)/g;
-  let m;
-  while ((m = re.exec(indexHtml)) !== null) {
-    const [, type, file] = m;
-    const bare = file.replace(/-[a-f0-9]{8,}(\.[^.]+)$/, '$1');
-    map[`${type}/${bare}`] = `/_next/static/${type}/${file}`;
-  }
-  return map;
+// Extract all /_next/static/... references from an HTML file in order.
+function extractStaticRefs(html) {
+  return [...html.matchAll(/\/_next\/static\/[^"'\s]+/g)].map((m) => m[0]);
 }
 
-// Patch all index.html files under a dir, replacing stale _next/static refs with new hashes
-function patchStaticRefs(dir, refMap) {
+// Patch a cached HTML file by positionally replacing its /_next/static/ references
+// with the corresponding ones from a freshly-built page of the same type.
+// All pages of the same route share the same component → same set of static refs.
+function patchHtml(cachedHtml, freshRefs) {
+  let i = 0;
+  let changed = false;
+  const result = cachedHtml.replace(/\/_next\/static\/[^"'\s]+/g, (match) => {
+    const fresh = freshRefs[i++];
+    if (fresh && fresh !== match) { changed = true; return fresh; }
+    return match;
+  });
+  return { html: result, changed };
+}
+
+function patchDir(dir, freshRefs) {
   const targetDir = path.join(outDir, dir);
   if (!fs.existsSync(targetDir)) return;
   function walk(d) {
@@ -29,40 +34,48 @@ function patchStaticRefs(dir, refMap) {
       const full = path.join(d, entry);
       if (fs.statSync(full).isDirectory()) { walk(full); continue; }
       if (entry !== 'index.html') continue;
-      let html = fs.readFileSync(full, 'utf8');
-      let changed = false;
-      html = html.replace(/\/_next\/static\/(css|chunks)\/([^"'\s]+)/g, (match, type, file) => {
-        const bare = file.replace(/-[a-f0-9]{8,}(\.[^.]+)$/, '$1');
-        const newRef = refMap[`${type}/${bare}`];
-        if (newRef && newRef !== match) { changed = true; return newRef; }
-        return match;
-      });
+      const cached = fs.readFileSync(full, 'utf8');
+      const { html, changed } = patchHtml(cached, freshRefs);
       if (changed) fs.writeFileSync(full, html);
     }
   }
   walk(targetDir);
 }
 
-const indexHtml = fs.existsSync(path.join(outDir, 'index.html'))
-  ? fs.readFileSync(path.join(outDir, 'index.html'), 'utf8')
-  : '';
-const refMap = buildRefMap(indexHtml);
+const CACHED = [
+  { dir: 'comparisons', flag: '.comparisons_cached' },
+  { dir: 'races',       flag: '.races_cached' },
+  { dir: 'constructors', flag: '.constructors_cached' },
+];
 
-const CACHED = ['comparisons', 'races', 'constructors'];
+for (const { dir, flag } of CACHED) {
+  const bakDir   = path.join(root, `_${dir}_bak`);
+  const flagFile = path.join(root, flag);
 
-for (const dir of CACHED) {
-  const bakDir  = path.join(root, `_${dir}_bak`);
-  const flagFile = path.join(root, `.${dir}_cached`);
+  if (!fs.existsSync(bakDir)) {
+    if (fs.existsSync(flagFile)) fs.rmSync(flagFile);
+    continue;
+  }
 
-  if (fs.existsSync(bakDir)) {
-    console.log(`[postbuild] Restoring ${dir} pages from backup...`);
-    fs.cpSync(bakDir, path.join(outDir, dir), { recursive: true });
-    fs.rmSync(bakDir, { recursive: true });
-    if (Object.keys(refMap).length > 0) {
-      patchStaticRefs(dir, refMap);
-    }
-    console.log(`[postbuild] ${dir}: restored.`);
+  // Read the freshly-built page for this section BEFORE restoring the backup.
+  // All pages of this type use the same component so they share the same static refs.
+  const freshId = fs.existsSync(flagFile) ? fs.readFileSync(flagFile, 'utf8').trim() : '';
+  const freshPagePath = freshId ? path.join(outDir, dir, freshId, 'index.html') : '';
+  const freshHtml = freshPagePath && fs.existsSync(freshPagePath)
+    ? fs.readFileSync(freshPagePath, 'utf8')
+    : '';
+  const freshRefs = extractStaticRefs(freshHtml);
+
+  console.log(`[postbuild] Restoring ${dir} pages from backup...`);
+  fs.cpSync(bakDir, path.join(outDir, dir), { recursive: true });
+  fs.rmSync(bakDir, { recursive: true });
+
+  if (freshRefs.length > 0) {
+    patchDir(dir, freshRefs);
+  } else {
+    console.log(`[postbuild] ${dir}: warning — no fresh refs found, cached pages not patched.`);
   }
 
   if (fs.existsSync(flagFile)) fs.rmSync(flagFile);
+  console.log(`[postbuild] ${dir}: restored.`);
 }

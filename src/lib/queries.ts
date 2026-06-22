@@ -79,13 +79,51 @@ function sprintPts2026(s = "s") {
 
 // ─── Championships ────────────────────────────────────────────────────────────
 
+// CTE that computes season totals applying the "best N results" drop rule (1950–1990).
+// Without this, e.g. Prost outscores Senna in 1988 on raw points (105 vs 94) but
+// Senna wins on best-11-of-16 (90 vs 87).
+function seasonPtsCTE() {
+  const rp = racePts();
+  const fl = flBonus();
+  const sp = sprintPts();
+  return `
+    race_pts AS (
+      SELECT YEAR(gp.date) AS year, r.driver_id, r.grandprix_id,
+        ((${rp}) + (${fl}) + (${sp})) AS pts
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    ),
+    race_ranked AS (
+      SELECT year, driver_id, pts,
+        ROW_NUMBER() OVER (PARTITION BY year, driver_id ORDER BY pts DESC, grandprix_id ASC) AS rn
+      FROM race_pts
+    ),
+    season_pts AS (
+      SELECT year, driver_id,
+        SUM(CASE WHEN rn <= CASE year
+          WHEN 1950 THEN 4 WHEN 1951 THEN 4 WHEN 1952 THEN 4 WHEN 1953 THEN 4
+          WHEN 1954 THEN 5 WHEN 1955 THEN 5 WHEN 1956 THEN 5 WHEN 1957 THEN 5
+          WHEN 1958 THEN 6 WHEN 1959 THEN 5 WHEN 1960 THEN 6
+          WHEN 1961 THEN 5 WHEN 1962 THEN 5 WHEN 1963 THEN 6 WHEN 1964 THEN 6
+          WHEN 1965 THEN 6 WHEN 1966 THEN 5 WHEN 1967 THEN 9 WHEN 1968 THEN 9
+          WHEN 1969 THEN 6 WHEN 1970 THEN 6 WHEN 1971 THEN 5 WHEN 1972 THEN 5
+          WHEN 1973 THEN 7 WHEN 1974 THEN 7 WHEN 1975 THEN 7 WHEN 1976 THEN 7
+          WHEN 1977 THEN 8 WHEN 1978 THEN 7 WHEN 1979 THEN 8 WHEN 1980 THEN 10
+          WHEN 1981 THEN 11 WHEN 1982 THEN 11 WHEN 1983 THEN 11 WHEN 1984 THEN 11
+          WHEN 1985 THEN 11 WHEN 1986 THEN 11 WHEN 1987 THEN 11 WHEN 1988 THEN 11
+          WHEN 1989 THEN 11 WHEN 1990 THEN 11
+          ELSE 999
+        END THEN pts ELSE 0 END) AS pts
+      FROM race_ranked
+      GROUP BY year, driver_id
+    )`;
+}
+
 export async function getAllChampionships(): Promise<{ driverId: number; championships: number }[]> {
   return query<{ driverId: number; championships: number }>(`
-    WITH season_pts AS (
-      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
-      FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
-      GROUP BY YEAR(gp.date), r.driver_id
-    )
+    WITH ${seasonPtsCTE()}
     SELECT sp.driver_id AS driverId, COUNT(*) AS championships
     FROM season_pts sp
     WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
@@ -94,11 +132,48 @@ export async function getAllChampionships(): Promise<{ driverId: number; champio
 }
 
 export async function getDriverChampionships(driverId: number): Promise<number> {
+  const rp = racePts();
+  const fl = flBonus();
+  const sp = sprintPts();
   const rows = await query<{ championships: number }>(`
-    WITH season_pts AS (
-      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
-      FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
-      GROUP BY YEAR(gp.date), r.driver_id
+    WITH driver_years AS (
+      SELECT DISTINCT YEAR(gp.date) AS year
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE r.driver_id = ?
+    ),
+    race_pts AS (
+      SELECT YEAR(gp.date) AS year, r.driver_id, r.grandprix_id,
+        ((${rp}) + (${fl}) + (${sp})) AS pts
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN driver_years dy ON YEAR(gp.date) = dy.year
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    ),
+    race_ranked AS (
+      SELECT year, driver_id, pts,
+        ROW_NUMBER() OVER (PARTITION BY year, driver_id ORDER BY pts DESC, grandprix_id ASC) AS rn
+      FROM race_pts
+    ),
+    season_pts AS (
+      SELECT year, driver_id,
+        SUM(CASE WHEN rn <= CASE year
+          WHEN 1950 THEN 4 WHEN 1951 THEN 4 WHEN 1952 THEN 4 WHEN 1953 THEN 4
+          WHEN 1954 THEN 5 WHEN 1955 THEN 5 WHEN 1956 THEN 5 WHEN 1957 THEN 5
+          WHEN 1958 THEN 6 WHEN 1959 THEN 5 WHEN 1960 THEN 6
+          WHEN 1961 THEN 5 WHEN 1962 THEN 5 WHEN 1963 THEN 6 WHEN 1964 THEN 6
+          WHEN 1965 THEN 6 WHEN 1966 THEN 5 WHEN 1967 THEN 9 WHEN 1968 THEN 9
+          WHEN 1969 THEN 6 WHEN 1970 THEN 6 WHEN 1971 THEN 5 WHEN 1972 THEN 5
+          WHEN 1973 THEN 7 WHEN 1974 THEN 7 WHEN 1975 THEN 7 WHEN 1976 THEN 7
+          WHEN 1977 THEN 8 WHEN 1978 THEN 7 WHEN 1979 THEN 8 WHEN 1980 THEN 10
+          WHEN 1981 THEN 11 WHEN 1982 THEN 11 WHEN 1983 THEN 11 WHEN 1984 THEN 11
+          WHEN 1985 THEN 11 WHEN 1986 THEN 11 WHEN 1987 THEN 11 WHEN 1988 THEN 11
+          WHEN 1989 THEN 11 WHEN 1990 THEN 11
+          ELSE 999
+        END THEN pts ELSE 0 END) AS pts
+      FROM race_ranked
+      GROUP BY year, driver_id
     ),
     season_winners AS (
       SELECT sp.year, sp.driver_id
@@ -108,8 +183,37 @@ export async function getDriverChampionships(driverId: number): Promise<number> 
     SELECT COUNT(*) AS championships
     FROM season_winners
     WHERE driver_id = ?
-  `, [driverId]);
+  `, [driverId, driverId]);
   return Number(rows[0]?.championships ?? 0);
+}
+
+export async function getDriverSeasonPositions(driverId: number): Promise<{ year: number; champPos: number }[]> {
+  return query<{ year: number; champPos: number }>(`
+    WITH driver_years AS (
+      SELECT DISTINCT YEAR(gp.date) AS year
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE r.driver_id = ?
+    ),
+    season_pts AS (
+      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${totalPts()}) AS pts
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN driver_years dy ON YEAR(gp.date) = dy.year
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      GROUP BY YEAR(gp.date), r.driver_id
+    ),
+    ranked AS (
+      SELECT year, driver_id,
+        RANK() OVER (PARTITION BY year ORDER BY pts DESC) AS champPos
+      FROM season_pts
+    )
+    SELECT year, CAST(champPos AS UNSIGNED) AS champPos
+    FROM ranked
+    WHERE driver_id = ?
+    ORDER BY year DESC
+  `, [driverId, driverId]);
 }
 
 // ─── Drivers ──────────────────────────────────────────────────────────────────
@@ -155,7 +259,9 @@ export async function getDriverById(id: number): Promise<(Driver & DriverStats) 
       SUM(${totalPts()}) AS points,
       COUNT(DISTINCT YEAR(gp.date)) AS seasons,
       MIN(YEAR(gp.date)) AS firstRace,
-      MAX(YEAR(gp.date)) AS lastRace
+      MAX(YEAR(gp.date)) AS lastRace,
+      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id WHERE r2.driver_id = d.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id WHERE r2.driver_id = d.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle
     FROM drivers d
     JOIN nationalities n ON d.nationality_id = n.id
     JOIN results r ON r.driver_id = d.id
@@ -173,25 +279,42 @@ export async function getDriverSeasons(driverId: number) {
   return query<{
     year: number; constructor: string; constructorId: number;
     races: number; wins: number; podiums: number; points: number;
+    teammates: string | null;
   }>(`
-    SELECT
-      YEAR(gp.date) AS year,
-      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
-      c.id AS constructorId,
-      COUNT(DISTINCT r.grandprix_id) AS races,
-      SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
-      SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
-      SUM(${totalPts()}) AS points
-    FROM results r
-    JOIN grandsprix gp ON r.grandprix_id = gp.id
-    JOIN entrants e ON r.entrant_id = e.id
-    JOIN constructors c ON e.constructor_id = c.id
-    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
-    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
-    WHERE r.driver_id = ?
-    GROUP BY YEAR(gp.date), c.id
-    ORDER BY year DESC
-  `, [driverId]);
+    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.points, tm.teammates
+    FROM (
+      SELECT
+        YEAR(gp.date) AS year,
+        COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
+        c.id AS constructorId,
+        COUNT(DISTINCT r.grandprix_id) AS races,
+        SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+        SUM(${totalPts()}) AS points
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN entrants e ON r.entrant_id = e.id
+      JOIN constructors c ON e.constructor_id = c.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      WHERE r.driver_id = ?
+      GROUP BY YEAR(gp.date), c.id
+    ) s
+    LEFT JOIN (
+      SELECT YEAR(gp2.date) AS year, e1t.constructor_id,
+        GROUP_CONCAT(DISTINCT CONCAT(d2.firstName, ' ', d2.surname) ORDER BY d2.surname SEPARATOR ', ') AS teammates
+      FROM results r1t
+      JOIN grandsprix gp2 ON r1t.grandprix_id = gp2.id
+      JOIN entrants e1t ON r1t.entrant_id = e1t.id
+      JOIN results r2t ON r2t.grandprix_id = r1t.grandprix_id
+        AND r2t.entrant_id = r1t.entrant_id
+        AND r2t.driver_id != r1t.driver_id
+      JOIN drivers d2 ON d2.id = r2t.driver_id
+      WHERE r1t.driver_id = ?
+      GROUP BY YEAR(gp2.date), e1t.constructor_id
+    ) tm ON tm.year = s.year AND tm.constructor_id = s.constructorId
+    ORDER BY s.year DESC
+  `, [driverId, driverId]);
 }
 
 export async function getDriverTeammates(driverId: number) {

@@ -11,7 +11,8 @@ export function getPool(): mysql.Pool {
       password: process.env.DB_PASSWORD ?? "",
       database: process.env.DB_NAME ?? "kiwif1",
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 3,
+      connectTimeout: 30000,
       dateStrings: true,
     });
   }
