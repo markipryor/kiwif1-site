@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions } from "@/lib/queries";
+import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions, getDriverRanks, getDriverRaceResults } from "@/lib/queries";
+import DriverSeasonTable from "./DriverSeasonTable";
 
 export async function generateStaticParams() {
-  const drivers = await getAllDrivers();
-  return drivers.map((d) => ({ id: String(d.id) }));
+  // TEMP: test D-12 with Alonso only before generating all drivers
+  return [{ id: "149" }];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -16,24 +17,25 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DriverPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [driver, seasons, teammates, championships, seasonPositions] = await Promise.all([
+  const [driver, seasons, teammates, championships, seasonPositions, ranks, raceResults] = await Promise.all([
     getDriverById(Number(id)),
     getDriverSeasons(Number(id)),
     getDriverTeammates(Number(id)),
     getDriverChampionships(Number(id)),
     getDriverSeasonPositions(Number(id)),
+    getDriverRanks(Number(id)),
+    getDriverRaceResults(Number(id)),
   ]);
-  const posMap = new Map(seasonPositions.map((p) => [p.year, p.champPos]));
 
   if (!driver) notFound();
 
   const stats = [
     { label: "Races", value: driver.races },
-    { label: "Wins", value: driver.wins },
-    { label: "Podiums", value: driver.podiums },
-    { label: "Poles", value: driver.poles },
-    { label: "Fastest Laps", value: driver.fastestLaps },
-    { label: "Points", value: Number(driver.points).toFixed(0) },
+    { label: "Wins", value: driver.wins, rank: Number(driver.wins) > 0 ? ranks.winsRank : null },
+    { label: "Podiums", value: driver.podiums, rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null },
+    { label: "Poles", value: driver.poles, rank: Number(driver.poles) > 0 ? ranks.polesRank : null },
+    { label: "Fastest Laps", value: driver.fastestLaps, rank: Number(driver.fastestLaps) > 0 ? ranks.fastestLapsRank : null },
+    { label: "Points", value: Number(driver.points).toFixed(0), rank: Number(driver.points) > 0 ? ranks.pointsRank : null },
     { label: "Seasons", value: driver.seasons },
   ];
 
@@ -83,6 +85,9 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-center">
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
+            {"rank" in s && s.rank != null && (
+              <p className="text-zinc-400 text-xs mt-0.5">#{s.rank} all-time</p>
+            )}
           </div>
         ))}
       </div>
@@ -97,55 +102,11 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
 
       {/* Season breakdown */}
       <h2 className="text-lg font-bold text-white mb-4">Season by Season</h2>
-      <div className="overflow-x-auto mb-12">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-              <th className="pb-3 text-left">Year</th>
-              <th className="pb-3 text-right">Pos</th>
-              <th className="pb-3 text-left pl-4">Constructor</th>
-              <th className="pb-3 text-left pl-4">Teammate(s)</th>
-              <th className="pb-3 text-right">Races</th>
-              <th className="pb-3 text-right">Wins</th>
-              <th className="pb-3 text-right">Podiums</th>
-              <th className="pb-3 text-right">Points</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/60">
-            {seasons.map((s) => {
-              const pos = posMap.get(s.year);
-              return (
-              <tr key={`${s.year}-${s.constructorId}`} className="hover:bg-zinc-900/60 transition-colors">
-                <td className="py-2.5">
-                  <Link href={`/seasons/${s.year}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                    {s.year}
-                  </Link>
-                </td>
-                <td className="py-2.5 text-right font-mono">
-                  {pos != null ? (
-                    <span className={pos === 1 ? "text-yellow-400 font-bold" : "text-zinc-400"}>P{pos}</span>
-                  ) : (
-                    <span className="text-zinc-600">—</span>
-                  )}
-                </td>
-                <td className="py-2.5 pl-4">
-                  <Link href={`/constructors/${s.constructorId}/`} className="text-zinc-400 hover:text-white transition-colors">
-                    {s.constructor}
-                  </Link>
-                </td>
-                <td className="py-2.5 pl-4 text-zinc-500 text-sm">{s.teammates ?? "—"}</td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
-                <td className="py-2.5 text-right font-mono">
-                  <span className={Number(s.wins) > 0 ? "text-white font-semibold" : "text-zinc-500"}>{s.wins}</span>
-                </td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.podiums}</td>
-                <td className="py-2.5 text-zinc-400 text-right font-mono">{Number(s.points).toFixed(0)}</td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DriverSeasonTable
+        seasons={seasons}
+        raceResults={raceResults}
+        seasonPositions={seasonPositions}
+      />
 
       {/* Teammates */}
       {teammates.length > 0 && (

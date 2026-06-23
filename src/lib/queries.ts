@@ -216,6 +216,79 @@ export async function getDriverSeasonPositions(driverId: number): Promise<{ year
   `, [driverId, driverId]);
 }
 
+// ─── Driver ranks & race results ──────────────────────────────────────────────
+
+export async function getDriverRanks(driverId: number): Promise<{
+  winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number;
+}> {
+  const rows = await query<{
+    winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number;
+  }>(`
+    WITH driver_totals AS (
+      SELECT
+        r.driver_id,
+        SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+        SUM(${totalPts()}) AS points,
+        COUNT(fl.grandprix_id) AS fastestLaps,
+        COUNT(CASE WHEN r.grid = '1' THEN pt.grandprix_id END) AS poles
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
+      GROUP BY r.driver_id
+    ),
+    ranked AS (
+      SELECT
+        driver_id,
+        RANK() OVER (ORDER BY wins DESC) AS winsRank,
+        RANK() OVER (ORDER BY podiums DESC) AS podiumsRank,
+        RANK() OVER (ORDER BY points DESC) AS pointsRank,
+        RANK() OVER (ORDER BY fastestLaps DESC) AS fastestLapsRank,
+        RANK() OVER (ORDER BY poles DESC) AS polesRank
+      FROM driver_totals
+    )
+    SELECT
+      CAST(winsRank AS UNSIGNED) AS winsRank,
+      CAST(podiumsRank AS UNSIGNED) AS podiumsRank,
+      CAST(pointsRank AS UNSIGNED) AS pointsRank,
+      CAST(fastestLapsRank AS UNSIGNED) AS fastestLapsRank,
+      CAST(polesRank AS UNSIGNED) AS polesRank
+    FROM ranked
+    WHERE driver_id = ?
+  `, [driverId]);
+  return rows[0] ?? { winsRank: 0, podiumsRank: 0, pointsRank: 0, polesRank: 0, fastestLapsRank: 0 };
+}
+
+export async function getDriverRaceResults(driverId: number): Promise<{
+  year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean;
+}[]> {
+  const rp = racePts();
+  const fl = flBonus();
+  const sp = sprintPts();
+  return query<{ year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean }>(`
+    SELECT
+      YEAR(gp.date) AS year,
+      gp.id AS grandprixId,
+      CASE
+        WHEN gp.fullTitle IS NOT NULL AND gp.fullTitle != '' THEN gp.fullTitle
+        WHEN gp.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp.date), ' Indianapolis 500')
+        ELSE CONCAT(YEAR(gp.date), ' ', gp.shortTitle, ' Grand Prix')
+      END AS raceTitle,
+      r.grid,
+      r.place,
+      ((${rp}) + (${fl}) + (${sp})) AS points,
+      CASE WHEN fl.driver_id IS NOT NULL THEN 1 ELSE 0 END AS hasFastestLap
+    FROM results r
+    JOIN grandsprix gp ON r.grandprix_id = gp.id
+    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    WHERE r.driver_id = ?
+    ORDER BY gp.date
+  `, [driverId]);
+}
+
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 
 export async function getAllDrivers(): Promise<(Driver & DriverStats)[]> {
