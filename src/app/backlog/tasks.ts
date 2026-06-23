@@ -28,7 +28,7 @@ export const sections: Section[] = [
       { id: "KF1-D-08", title: "Champion icons",              complexity: "S", status: "done", version: "v6.0.5beta", description: "Show a visual indicator beside drivers who have won a World Championship." },
       { id: "KF1-D-09", title: "Championships count",         complexity: "S", status: "done", version: "v6.0.5beta", description: "Show the number of World Championships won on the drivers list and detail pages." },
       { id: "KF1-D-10", title: "Ranks to statistics",         complexity: "S", status: "done", version: "v6.0.9beta", description: "Show each driver's all-time rank for wins, podiums, points, poles, and fastest laps on the driver detail stat cards. Rank is hidden for zero values." },
-      { id: "KF1-D-12", title: "Full results breakdown",      complexity: "M", status: "done", version: "v6.0.9beta", description: "Expandable season rows on the driver detail page showing each race with title (full name or '{year} {country} Grand Prix'), grid, finish, fastest lap (purple FL column), and points. Race titles link to individual race pages. Fixed stale race page cache — all 1171 races now fully generated." },
+      { id: "KF1-D-12", title: "Full results breakdown",      complexity: "M", status: "done", version: "v6.0.9beta", description: "Expandable season rows on the driver detail page showing each race with title (fullTitle if set, else '{year} {adjective} Grand Prix' using nationality adjective from DB, or '{year} Indianapolis 500'; US races use 'United States' not 'American'), grid, finish, fastest lap (purple FL column), and points. Race titles link to individual race pages. Fixed stale race page cache — all 1171 races fully generated." },
       { id: "KF1-D-BUG-01", title: "Bug: Spurious 0s after driver names", complexity: "S", status: "done", version: "v6.0.4beta", description: "MySQL returns tinyint(1) fields as 0/1 numbers; JSX short-circuit {0 && <span>} renders a literal 0. Fixed by coercing to Boolean() in page.tsx map." },
       { id: "KF1-D-BUG-02", title: "Bug: Flag icons not showing",          complexity: "S", status: "done", version: "v6.0.6beta", description: "Flag icons not displaying on the drivers list. CDN link is in layout but flags are absent — likely a CSS class or code path issue." },
       { id: "KF1-D-BUG-03", title: "Bug: Senna shows 2 championships (should be 3)", complexity: "S", status: "done", version: "v6.0.7beta", description: "Championship count query returning 2 for Senna instead of 3. Root cause: 1988 raw points gave Prost the win (105 vs 94); fixed by applying the 'best N results' drop rule per season via seasonPtsCTE() with window functions." },
@@ -101,6 +101,16 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.0.9beta",
+    changes: [
+      "Driver pages: All-time rank shown on each stat card (wins, podiums, points, poles, fastest laps) — hidden for zero values",
+      "Driver pages: Season rows now expandable to show race-by-race results (race name, grid, finish, fastest lap, points)",
+      "Driver pages: Race titles use nationality adjective (e.g. 'Australian Grand Prix' not 'Australia Grand Prix'); US races show 'United States Grand Prix'; Indianapolis 500 preserved as-is",
+      "Driver pages: Purple FL column in race results where fastest lap was set",
+      "Race pages: Fixed stale cache — all 1171 race pages now generated and linked correctly",
+    ],
+  },
   {
     version: "v6.0.8beta",
     changes: [

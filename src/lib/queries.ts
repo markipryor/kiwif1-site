@@ -274,7 +274,8 @@ export async function getDriverRaceResults(driverId: number): Promise<{
       CASE
         WHEN gp.fullTitle IS NOT NULL AND gp.fullTitle != '' THEN gp.fullTitle
         WHEN gp.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp.date), ' Indianapolis 500')
-        ELSE CONCAT(YEAR(gp.date), ' ', gp.shortTitle, ' Grand Prix')
+        WHEN n.adjective = 'American' THEN CONCAT(YEAR(gp.date), ' United States Grand Prix')
+        ELSE CONCAT(YEAR(gp.date), ' ', n.adjective, ' Grand Prix')
       END AS raceTitle,
       r.grid,
       r.place,
@@ -282,6 +283,9 @@ export async function getDriverRaceResults(driverId: number): Promise<{
       CASE WHEN fl.driver_id IS NOT NULL THEN 1 ELSE 0 END AS hasFastestLap
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
+    JOIN circuitlayouts cl ON gp.circuitlayout_id = cl.id
+    JOIN circuits ci ON cl.circuit_id = ci.id
+    JOIN nationalities n ON ci.nationality_id = n.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
     WHERE r.driver_id = ?
