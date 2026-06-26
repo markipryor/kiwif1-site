@@ -41,6 +41,7 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
   const winnerMap = new Map(winners.map((w) => [w.raceId, w]));
   const maxDriverPoints = driverStandings[0]?.points ?? 1;
   const maxConstructorPoints = constructorStandings[0]?.points ?? 1;
+  const isComplete = races.length > 0 && new Date(races[races.length - 1].date) < new Date();
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
@@ -50,11 +51,16 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
 
       <div className="mt-6 mb-10">
         <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mb-1">Season</p>
-        <h1 className="text-4xl font-bold text-white">{year} Formula 1 World Championship</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-4xl font-bold text-white">{year} Formula 1 World Championship</h1>
+          {!isComplete && (
+            <span className="text-sm bg-blue-900/40 text-blue-400 border border-blue-700/40 px-2.5 py-1 rounded-full leading-none">In Progress</span>
+          )}
+        </div>
       </div>
 
       {/* Driver standings */}
-      <h2 className="text-lg font-bold text-white mb-4">Driver Standings</h2>
+      <h2 className="text-lg font-bold text-white mb-4">{isComplete ? "Driver Standings" : "Driver Standings (In Progress)"}</h2>
       <div className="space-y-2 mb-12">
         {driverStandings.map((d) => (
           <div key={`${d.driverId}-${d.constructorId}`} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">
@@ -86,7 +92,7 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
       {/* Constructor standings */}
       {constructorStandings.length > 0 && (
         <>
-          <h2 className="text-lg font-bold text-white mb-4">Constructor Standings</h2>
+          <h2 className="text-lg font-bold text-white mb-4">{isComplete ? "Constructor Standings" : "Constructor Standings (In Progress)"}</h2>
           <div className="space-y-2 mb-12">
             {constructorStandings.map((c) => (
               <div key={c.constructorId} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">

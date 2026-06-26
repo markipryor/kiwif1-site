@@ -127,6 +127,9 @@ export async function getAllChampionships(): Promise<{ driverId: number; champio
     SELECT sp.driver_id AS driverId, COUNT(*) AS championships
     FROM season_pts sp
     WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
+      AND sp.year IN (
+        SELECT YEAR(g.date) FROM grandsprix g GROUP BY YEAR(g.date) HAVING MAX(g.date) < CURDATE()
+      )
     GROUP BY sp.driver_id
   `);
 }
@@ -179,6 +182,9 @@ export async function getDriverChampionships(driverId: number): Promise<number> 
       SELECT sp.year, sp.driver_id
       FROM season_pts sp
       WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
+        AND sp.year IN (
+          SELECT YEAR(gp2.date) FROM grandsprix gp2 GROUP BY YEAR(gp2.date) HAVING MAX(gp2.date) < CURDATE()
+        )
     )
     SELECT COUNT(*) AS championships
     FROM season_winners
@@ -448,6 +454,9 @@ export async function getAllConstructorChampionships(): Promise<{ constructorId:
     season_winners AS (
       SELECT year, constructor_id FROM season_totals st1
       WHERE pts = (SELECT MAX(pts) FROM season_totals st2 WHERE st2.year = st1.year)
+        AND year IN (
+          SELECT YEAR(gp2.date) FROM grandsprix gp2 GROUP BY YEAR(gp2.date) HAVING MAX(gp2.date) < CURDATE()
+        )
     )
     SELECT constructor_id AS constructorId, CAST(COUNT(*) AS UNSIGNED) AS championships
     FROM season_winners
@@ -612,14 +621,15 @@ export async function getRaceSprintResults(raceId: number) {
 
 // ─── Seasons ───────────────────────────────────────────────────────────────────
 
-export async function getAllSeasons(): Promise<{ year: number; races: number; drivers: number; winner: string | null }[]> {
+export async function getAllSeasons(): Promise<{ year: number; races: number; drivers: number; isComplete: boolean; winner: string | null }[]> {
   const [seasons, winners] = await Promise.all([
-    query<{ year: number; races: number; drivers: number }>(`
-      SELECT YEAR(gp.date) AS year, COUNT(DISTINCT gp.id) AS races, COUNT(DISTINCT r.driver_id) AS drivers
+    query<{ year: number; races: number; drivers: number; isComplete: number }>(`
+      SELECT YEAR(gp.date) AS year, COUNT(DISTINCT gp.id) AS races, COUNT(DISTINCT r.driver_id) AS drivers,
+        MAX(gp.date) < CURDATE() AS isComplete
       FROM grandsprix gp JOIN results r ON r.grandprix_id = gp.id
       GROUP BY YEAR(gp.date) ORDER BY year DESC
     `),
-    // Race-only points for champion (sprint/FL never changed a championship result;
+    // Race-only points for leader/champion (sprint/FL never changed a championship result;
     // omitting those joins keeps this from 10s → 0.1s)
     query<{ year: number; winner: string }>(`
       WITH season_pts AS (
@@ -636,7 +646,7 @@ export async function getAllSeasons(): Promise<{ year: number; races: number; dr
     `),
   ]);
   const winnerMap = new Map(winners.map((w) => [w.year, w.winner]));
-  return seasons.map((s) => ({ ...s, winner: winnerMap.get(s.year) ?? null }));
+  return seasons.map((s) => ({ ...s, isComplete: !!s.isComplete, winner: winnerMap.get(s.year) ?? null }));
 }
 
 export async function getSeasonRaces(year: number): Promise<Race[]> {

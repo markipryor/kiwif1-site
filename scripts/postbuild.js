@@ -76,6 +76,11 @@ for (const { dir, seed } of SECTIONS) {
     continue;
   }
 
+  // Save the freshly-built list page — it has current chunk refs and must not be overwritten
+  // by the backup (which was built in a previous run with different chunk hashes).
+  const freshListFile = path.join(sectionOut, 'index.html');
+  const freshListHtml = fs.existsSync(freshListFile) ? fs.readFileSync(freshListFile, 'utf8') : null;
+
   // For partial builds: save freshly-generated pages before restoring backup
   if (kind === 'partial' && fs.existsSync(sectionOut)) {
     if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true });
@@ -115,6 +120,11 @@ for (const { dir, seed } of SECTIONS) {
     console.log(`[postbuild] ${dir}: restored + merged ${freshCount} fresh pages.`);
   } else {
     console.log(`[postbuild] ${dir}: restored.`);
+  }
+
+  // Always use the fresh list page — its chunk refs match the current build, not the backup
+  if (freshListHtml) {
+    fs.writeFileSync(path.join(sectionOut, 'index.html'), freshListHtml);
   }
 
   if (fs.existsSync(seedFile)) fs.rmSync(seedFile);

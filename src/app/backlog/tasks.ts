@@ -69,7 +69,7 @@ export const sections: Section[] = [
     tasks: [
       { id: "KF1-S-01", title: "Champion wins and points",   complexity: "S", status: "pending", description: "Show the champion's win count and total points alongside their name on the seasons list." },
       { id: "KF1-S-02", title: "Milestones",                 complexity: "M", status: "pending", description: "Highlight key season milestones — first win, first pole, championship clinch race, etc. on the season detail page." },
-      { id: "KF1-S-ENH-01", title: "Show championship leader for current season", complexity: "S", status: "pending", description: "The seasons list currently shows the points leader for the current season as if they are the champion. For the current (incomplete) season, label them as 'Leader' rather than treating them as champion." },
+      { id: "KF1-S-ENH-01", title: "Show championship leader for current season", complexity: "S", status: "done", version: "v6.0.11beta", description: "The seasons list currently shows the points leader for the current season as if they are the champion. For the current (incomplete) season, label them as 'Leader' rather than treating them as champion." },
     ],
   },
   {
@@ -126,6 +126,16 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.0.11beta",
+    changes: [
+      "Seasons list: current/incomplete season shows 'Leader' badge instead of treating leader as champion",
+      "Season detail page: 'In Progress' badge in header; standings sections labelled '(In Progress)' when season not yet complete",
+      "Drivers list & driver pages: championship stars now only count completed seasons (current season leader no longer shown as champion)",
+      "Constructors list & constructor pages: WCC stars now only count completed seasons",
+      "Fixed: module factory error on All Drivers page (stale list page now refreshed after each partial build)",
+    ],
+  },
   {
     version: "v6.0.10beta",
     changes: [
@@ -225,6 +235,7 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-S-ENH-01", title: "Show championship leader for current season", version: "v6.0.11beta" },
   { id: "KF1-C-01", title: "Make columns sortable", version: "v6.0.10beta" },
   { id: "KF1-C-02", title: "Add filters", version: "v6.0.10beta" },
   { id: "KF1-C-03", title: "Flag icons", version: "v6.0.10beta" },

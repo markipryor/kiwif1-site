@@ -31,7 +31,16 @@ export default async function SeasonsPage() {
                 </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
                 <td className="py-2.5 text-zinc-400 text-right font-mono">{s.drivers}</td>
-                <td className="py-2.5 text-zinc-300 pl-6">{s.winner ?? "—"}</td>
+                <td className="py-2.5 pl-6">
+                  {s.isComplete ? (
+                    <span className="text-zinc-300">{s.winner ?? "—"}</span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span className="text-zinc-300">{s.winner ?? "—"}</span>
+                      <span className="text-xs bg-blue-900/40 text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded-full leading-none">Leader</span>
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
