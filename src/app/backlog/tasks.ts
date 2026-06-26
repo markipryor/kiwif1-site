@@ -45,18 +45,19 @@ export const sections: Section[] = [
       { id: "KF1-D-ENH-06", title: "Wrap championship stars onto two rows for 5+ titles", complexity: "S", status: "done", version: "v6.0.8beta", description: "Drivers with 5 stars (Fangio) or 7 stars (Schumacher, Hamilton) now show stars in two rows using a ceil/floor split (5→3+2, 7→4+3) on both the drivers list and driver detail page." },
       { id: "KF1-D-ENH-07", title: "First/last race as text with full race name", complexity: "S", status: "done", version: "v6.0.8beta", description: "On the driver detail page, First race and Last race are now shown as plain text below the stat cards with the full race name and year. Current drivers show 'Latest race' instead of 'Last race'." },
       { id: "KF1-D-ENH-08", title: "Championships box on its own row above stats", complexity: "S", status: "done", version: "v6.0.8beta", description: "On the driver detail page, the Championships banner now appears in its own amber-tinted row above the stat cards and is hidden entirely for drivers with no titles. The 7 remaining stats fit on one row." },
+      { id: "KF1-D-ENH-09", title: "Redesign penalty section on driver page", complexity: "M", status: "pending", description: "Rework the penalty/incident section on the driver detail page — improve layout, visual hierarchy, and information density to make penalty history easier to read." },
     ],
   },
   {
     label: "Constructors",
     tasks: [
-      { id: "KF1-C-01", title: "Make columns sortable",                complexity: "S", status: "pending", description: "Click column headers on the constructors list to sort by any stat." },
-      { id: "KF1-C-02", title: "Add filters",                          complexity: "S", status: "pending", description: "Filter constructors by nationality, active/inactive, or era." },
-      { id: "KF1-C-03", title: "Flag icons",                           complexity: "S", status: "pending", description: "Show a nationality flag beside each constructor." },
-      { id: "KF1-C-04", title: "Champion icons",                       complexity: "S", status: "pending", description: "Visual indicator for constructors who have won the Constructors' Championship." },
+      { id: "KF1-C-01", title: "Make columns sortable",                complexity: "S", status: "done", version: "v6.0.10beta", description: "Click column headers on the constructors list to sort by any stat." },
+      { id: "KF1-C-02", title: "Add filters",                          complexity: "S", status: "done", version: "v6.0.10beta", description: "Filter constructors by nationality, active/inactive, or era." },
+      { id: "KF1-C-03", title: "Flag icons",                           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show a nationality flag beside each constructor." },
+      { id: "KF1-C-04", title: "Champion icons",                       complexity: "S", status: "done", version: "v6.0.10beta", description: "Visual indicator for constructors who have won the Constructors' Championship." },
       { id: "KF1-C-05", title: "More nationality data",                complexity: "S", status: "pending", description: "Expand nationality coverage — many constructors currently have no nationality set." },
       { id: "KF1-C-06", title: "Simplify multi-line displays",         complexity: "S", status: "pending", description: "The driver list in season-by-season rows can be very long — truncate or collapse it." },
-      { id: "KF1-C-07", title: "Full names and short names",           complexity: "S", status: "pending", description: "Show both the full constructor name and short name where space allows; use short name in compact views." },
+      { id: "KF1-C-07", title: "Full names and short names",           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show both the full constructor name and short name where space allows; use short name in compact views." },
       { id: "KF1-C-08", title: "Season stats broken down by driver",   complexity: "M", status: "pending", description: "Expand each season row on the constructor detail page to show each driver's individual contribution." },
       { id: "KF1-C-09", title: "Add ranks",                           complexity: "S", status: "pending", description: "Show all-time rank for each stat (wins, podiums, points, titles) on the constructor detail page." },
       { id: "KF1-C-10", title: "History data for all teams",          complexity: "L", status: "pending", description: "Add formedFrom/became chain data for all relevant constructor lineages, not just Mercedes." },
@@ -92,15 +93,51 @@ export const sections: Section[] = [
     ],
   },
   {
+    label: "Data Integrity",
+    tasks: [
+      { id: "KF1-DI-01", title: "Verify driver champion for every season 1950–2025",         complexity: "M", status: "pending", description: "Query computed championship standings and confirm the champion matches the known historical record for every season. Catches points logic bugs and missing results." },
+      { id: "KF1-DI-02", title: "Check drop-rule edge cases don't produce wrong champion",   complexity: "S", status: "pending", description: "Identify seasons where the raw points leader differs from the best-N-results leader and verify our logic picks the correct winner (e.g. 1988 Senna vs Prost)." },
+      { id: "KF1-DI-03", title: "Verify constructor championship winners 1958–2025",         complexity: "M", status: "pending", description: "Cross-check the computed getAllConstructorChampionships() results against the known WCC winners for all seasons since the trophy was introduced." },
+      { id: "KF1-DI-04", title: "List races with missing pole times",                        complexity: "S", status: "pending", description: "Query races with no entry in the poletimes table, grouped by year, to identify where qualifying time data needs to be added." },
+      { id: "KF1-DI-05", title: "List races with missing fastest laps",                      complexity: "S", status: "pending", description: "Query races with no entry in the fastestlaps table. Early years are expected gaps; flag anything post-1950 that looks like missing data." },
+      { id: "KF1-DI-06", title: "Find drivers with missing nationality code",                complexity: "S", status: "pending", description: "Query drivers whose nationalityCode is null or empty — these show blank flags on the drivers list and detail pages." },
+      { id: "KF1-DI-07", title: "Find constructors with missing nationality",                complexity: "S", status: "pending", description: "Query constructors with null nationality_id — these show no flag on the constructors list. Relates to KF1-C-05." },
+      { id: "KF1-DI-08", title: "Find results with mismatched place/position fields",        complexity: "S", status: "pending", description: "Query results rows where place is null or non-numeric but position is valid, or vice versa. These can cause incorrect win/podium counts." },
+      { id: "KF1-DI-09", title: "Find entrants with no results",                             complexity: "S", status: "pending", description: "Query entrant rows that have no matching results rows — may indicate orphaned data or entries that never started." },
+      { id: "KF1-DI-10", title: "Find races with no recorded winner",                        complexity: "S", status: "pending", description: "Query races where no result row has place = '1' or position = 1. Should be zero — any hits indicate missing or malformed result data." },
+      { id: "KF1-DI-11", title: "Find duplicate grid positions within a race",               complexity: "S", status: "pending", description: "Query races where the same grid position appears for more than one driver. Legitimate in rare cases (shared row) but worth flagging for review." },
+      { id: "KF1-DI-12", title: "Find results with points outside era scoring positions",    complexity: "M", status: "pending", description: "Query results where points > 0 but the finishing position is outside the expected points-paying range for that season's era (e.g. P11+ scoring in the 6-points era)." },
+      { id: "KF1-DI-13", title: "Find sprint results for races without sprint flag",         complexity: "S", status: "pending", description: "Query sprints table entries for grandprix rows that don't have a sprint flag set, and vice versa — sprints flagged but no sprint results recorded." },
+      { id: "KF1-DI-14", title: "Find drivers in results with no constructor link",          complexity: "S", status: "pending", description: "Query results rows where the driver has no entrant record linking them to a constructor. These drivers would be invisible on constructor pages." },
+      { id: "KF1-DI-15", title: "Find comparison pages that return 404",                     complexity: "M", status: "pending", description: "Query all current teammate pairs from the DB and check which /comparisons/[pair] pages are missing from the built output. Relates to KF1-COMP-BUG-02." },
+      { id: "KF1-DI-16", title: "Cross-check top driver stats against official records",     complexity: "M", status: "pending", description: "For 5–10 well-known drivers (Hamilton, Schumacher, Senna, Prost, Verstappen etc.) compare our computed wins, poles, points, and championships against Wikipedia/official F1 stats." },
+      { id: "KF1-DI-17", title: "Cross-check top constructor stats against official records", complexity: "M", status: "pending", description: "For top constructors (Ferrari, Mercedes, Red Bull, McLaren, Williams) compare our computed wins, poles, points, and championships against official records." },
+    ],
+  },
+  {
     label: "Site",
     tasks: [
       { id: "KF1-X-01", title: "Data validation",       complexity: "M", status: "pending", description: "Audit all data for accuracy — cross-check points totals, standings, race results, and pole positions against official sources." },
       { id: "KF1-X-02", title: "Test all functionality", complexity: "M", status: "pending", description: "Full functional test pass across all pages and edge cases: missing data, single-race constructors, shared drives, DNS/DNQ entries." },
+      { id: "KF1-X-03", title: "Remote triggers for build/deploy", complexity: "S", status: "pending", description: "Set up Claude Code remote triggers so builds and deployments can be kicked off from a phone via claude.ai. At minimum: race update trigger (runs build:race then deploy) and full build trigger." },
+      { id: "KF1-X-04", title: "Add missing pole times", complexity: "M", status: "pending", description: "The poletimes table is missing qualifying time data for many races. Research and populate missing pole times so they display correctly on race pages and in constructor/driver stats." },
     ],
   },
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.0.10beta",
+    changes: [
+      "Constructors list: sortable columns (click any header)",
+      "Constructors list: nationality dropdown filter, current-only toggle, Indy 500 toggle (hidden by default)",
+      "Constructors list: nationality flag icons",
+      "Constructors list: WCC championship stars (★ per title, stacked for 4+)",
+      "Constructors list: full name as primary link, short name shown below when it differs",
+      "Constructors list: poles column added",
+      "Constructors list: default sort by name A→Z",
+    ],
+  },
   {
     version: "v6.0.9beta",
     changes: [
@@ -188,6 +225,11 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-C-01", title: "Make columns sortable", version: "v6.0.10beta" },
+  { id: "KF1-C-02", title: "Add filters", version: "v6.0.10beta" },
+  { id: "KF1-C-03", title: "Flag icons", version: "v6.0.10beta" },
+  { id: "KF1-C-04", title: "Champion icons", version: "v6.0.10beta" },
+  { id: "KF1-C-07", title: "Full names and short names", version: "v6.0.10beta" },
   { id: "KF1-D-BUG-06", title: "Bug: Incorrect nationality text for some drivers", version: "v6.0.8beta" },
   { id: "KF1-D-ENH-05", title: "Default sort by last name on drivers list", version: "v6.0.8beta" },
   { id: "KF1-D-ENH-06", title: "Wrap championship stars onto two rows for 5+ titles", version: "v6.0.8beta" },

@@ -1,15 +1,18 @@
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllConstructors, getConstructorById, getConstructorSeasons, getConstructorChain } from "@/lib/queries";
+import { getBuildConfig, getSeed } from "@/lib/build-config";
 
 export async function generateStaticParams() {
-  const flagFile = path.join(process.cwd(), ".constructors_cached");
-  if (fs.existsSync(flagFile)) {
-    const id = fs.readFileSync(flagFile, "utf8").trim();
-    return id ? [{ id }] : [];
+  const cfg = getBuildConfig();
+  const spec = cfg?.constructors;
+  if (spec === "all") {
+    const constructors = await getAllConstructors();
+    return constructors.map((c) => ({ id: String(c.id) }));
   }
+  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  const seed = getSeed(".constructors_seed");
+  if (seed) return [{ id: seed }];
   const constructors = await getAllConstructors();
   return constructors.map((c) => ({ id: String(c.id) }));
 }

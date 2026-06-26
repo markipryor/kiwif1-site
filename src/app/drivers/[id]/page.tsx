@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions, getDriverRanks, getDriverRaceResults } from "@/lib/queries";
+import { getBuildConfig, getSeed } from "@/lib/build-config";
 import DriverSeasonTable from "./DriverSeasonTable";
 
 export async function generateStaticParams() {
-  // TEMP: test D-12 with Alonso only before generating all drivers
-  return [{ id: "149" }];
+  const cfg = getBuildConfig();
+  const spec = cfg?.drivers;
+  if (spec === "all" || !cfg) {
+    const all = await getAllDrivers();
+    return all.map((d) => ({ id: String(d.id) }));
+  }
+  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  const seed = getSeed(".drivers_seed");
+  if (seed) return [{ id: seed }];
+  const all = await getAllDrivers();
+  return all.map((d) => ({ id: String(d.id) }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {

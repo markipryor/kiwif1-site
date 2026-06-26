@@ -16,26 +16,57 @@ if (fs.existsSync(flagIconsSrc)) {
   console.log('[prebuild] Copied flag-icons to public/.');
 }
 
-// Each entry: out dir to preserve, flag file to write, regex to identify a valid subdir ID
-const CACHED = [
-  { dir: 'comparisons', flag: '.comparisons_cached', pattern: /^\d+-vs-\d+$/ },
-  { dir: 'races',       flag: '.races_cached',       pattern: /^\d+$/ },
-  { dir: 'constructors', flag: '.constructors_cached', pattern: /^\d+$/ },
+// Read build config if present
+const configFile = path.join(root, '.build-config.json');
+const config = fs.existsSync(configFile) ? JSON.parse(fs.readFileSync(configFile, 'utf8')) : null;
+
+// Section definitions: out dir, seed file, regex to identify a valid subdir name
+const SECTIONS = [
+  { dir: 'comparisons', seed: '.comparisons_seed', pattern: /^\d+-vs-\d+$/ },
+  { dir: 'races',       seed: '.races_seed',       pattern: /^\d+$/ },
+  { dir: 'constructors', seed: '.constructors_seed', pattern: /^\d+$/ },
+  { dir: 'drivers',     seed: '.drivers_seed',     pattern: /^\d+$/ },
+  { dir: 'seasons',     seed: '.seasons_seed',     pattern: /^\d{4}$/ },
 ];
 
-for (const { dir, flag, pattern } of CACHED) {
+// legacy mode (no config): drivers + seasons are always fully rebuilt; others are passive.
+// config mode: "all" = fully rebuild; array or "current-pairs" = partial; absent = passive.
+function isActive(dir) {
+  if (!config) return dir === 'drivers' || dir === 'seasons';
+  return config[dir] === 'all';
+}
+
+for (const { dir, seed, pattern } of SECTIONS) {
   const outDir  = path.join(root, 'out', dir);
   const bakDir  = path.join(root, `_${dir}_bak`);
-  const flagFile = path.join(root, flag);
+  const seedFile = path.join(root, seed);
 
+  // Clean up old seed file
+  if (fs.existsSync(seedFile)) fs.rmSync(seedFile);
+
+  if (isActive(dir)) {
+    // Full rebuild: no backup needed
+    if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true });
+    console.log(`[prebuild] ${dir}: active — will fully rebuild.`);
+    continue;
+  }
+
+  // Passive or partial: back up existing pages and write a seed ID for CSS ref extraction
   if (fs.existsSync(outDir)) {
+    const spec = config ? config[dir] : undefined;
+    const label = Array.isArray(spec)
+      ? `partial — will generate ${spec.length} specific page(s) and restore the rest.`
+      : spec === 'current-pairs'
+        ? 'current-pairs — will generate current-driver comparison pages and restore the rest.'
+        : 'cached — will generate 1 page and restore the rest.';
+
     console.log(`[prebuild] Backing up ${dir} pages...`);
     if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true });
     fs.cpSync(outDir, bakDir, { recursive: true });
     const entries = fs.readdirSync(bakDir);
     const first = entries.find((d) => pattern.test(d));
-    fs.writeFileSync(flagFile, first || '');
-    console.log(`[prebuild] ${dir}: cached — will generate 1 page and restore the rest.`);
+    if (first) fs.writeFileSync(seedFile, first);
+    console.log(`[prebuild] ${dir}: ${label}`);
   } else {
     console.log(`[prebuild] ${dir}: no existing pages — will generate from scratch.`);
   }

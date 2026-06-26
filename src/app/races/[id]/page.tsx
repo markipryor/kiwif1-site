@@ -1,15 +1,19 @@
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllSeasons, getSeasonRaces, getRaceById, getRaceResults, getRacePole, getRaceFastestLap, getRaceSprintResults } from "@/lib/queries";
+import { getBuildConfig, getSeed } from "@/lib/build-config";
 
 export async function generateStaticParams() {
-  const flagFile = path.join(process.cwd(), ".races_cached");
-  if (fs.existsSync(flagFile)) {
-    const id = fs.readFileSync(flagFile, "utf8").trim();
-    return id ? [{ id }] : [];
+  const cfg = getBuildConfig();
+  const spec = cfg?.races;
+  if (spec === "all") {
+    const seasons = await getAllSeasons();
+    const allRaces = await Promise.all(seasons.map((s) => getSeasonRaces(s.year)));
+    return allRaces.flat().map((r) => ({ id: String(r.id) }));
   }
+  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  const seed = getSeed(".races_seed");
+  if (seed) return [{ id: seed }];
   const seasons = await getAllSeasons();
   const allRaces = await Promise.all(seasons.map((s) => getSeasonRaces(s.year)));
   return allRaces.flat().map((r) => ({ id: String(r.id) }));

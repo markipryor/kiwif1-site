@@ -1,15 +1,21 @@
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllTeammatePairs, getDriverById, getTeammateComparison } from "@/lib/queries";
+import { getAllTeammatePairs, getCurrentTeammatePairs, getDriverById, getTeammateComparison } from "@/lib/queries";
+import { getBuildConfig, getSeed } from "@/lib/build-config";
 
 export async function generateStaticParams() {
-  const flagFile = path.join(process.cwd(), ".comparisons_cached");
-  if (fs.existsSync(flagFile)) {
-    const pair = fs.readFileSync(flagFile, "utf8").trim();
-    return pair ? [{ pair }] : [];
+  const cfg = getBuildConfig();
+  const spec = cfg?.comparisons;
+  if (spec === "all") {
+    const pairs = await getAllTeammatePairs();
+    return pairs.map((p) => ({ pair: `${p.driverAId}-vs-${p.driverBId}` }));
   }
+  if (spec === "current-pairs") {
+    const pairs = await getCurrentTeammatePairs();
+    return pairs.map((p) => ({ pair: `${p.driverAId}-vs-${p.driverBId}` }));
+  }
+  const seed = getSeed(".comparisons_seed");
+  if (seed) return [{ pair: seed }];
   const pairs = await getAllTeammatePairs();
   return pairs.map((p) => ({ pair: `${p.driverAId}-vs-${p.driverBId}` }));
 }

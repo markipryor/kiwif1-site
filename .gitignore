@@ -44,9 +44,22 @@ next-env.d.ts
 _comparisons_bak/
 _races_bak/
 _constructors_bak/
+_drivers_bak/
+_seasons_bak/
+_comparisons_fresh/
+_races_fresh/
+_constructors_fresh/
+_drivers_fresh/
+_seasons_fresh/
 .comparisons_cached
 .races_cached
 .constructors_cached
+.comparisons_seed
+.races_seed
+.constructors_seed
+.drivers_seed
+.seasons_seed
+.build-config.json
 public/flag-icons/
 
 .vercel
