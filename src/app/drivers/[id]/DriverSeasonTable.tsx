@@ -11,6 +11,7 @@ type SeasonRow = {
   wins: number;
   podiums: number;
   points: number;
+  isComplete: number;
   teammates: string | null;
 };
 
@@ -104,6 +105,9 @@ export default function DriverSeasonTable({
                     >
                       {s.year}
                     </Link>
+                    {isFirstForYear && !s.isComplete && (
+                      <span className="text-xs bg-blue-900/40 text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded-full leading-none">In Progress</span>
+                    )}
                   </div>
                 </td>
                 <td className="py-2.5 text-right font-mono">

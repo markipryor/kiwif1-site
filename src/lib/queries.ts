@@ -358,9 +358,9 @@ export async function getDriverSeasons(driverId: number) {
   return query<{
     year: number; constructor: string; constructorId: number;
     races: number; wins: number; podiums: number; points: number;
-    teammates: string | null;
+    isComplete: number; teammates: string | null;
   }>(`
-    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.points, tm.teammates
+    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.points, s.isComplete, tm.teammates
     FROM (
       SELECT
         YEAR(gp.date) AS year,
@@ -369,7 +369,8 @@ export async function getDriverSeasons(driverId: number) {
         COUNT(DISTINCT r.grandprix_id) AS races,
         SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
         SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
-        SUM(${totalPts()}) AS points
+        SUM(${totalPts()}) AS points,
+        YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
       FROM results r
       JOIN grandsprix gp ON r.grandprix_id = gp.id
       JOIN entrants e ON r.entrant_id = e.id
@@ -494,7 +495,7 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
 
 export async function getConstructorSeasons(constructorId: number) {
   return query<{
-    year: number; races: number; wins: number; podiums: number; points: number; drivers: string;
+    year: number; races: number; wins: number; podiums: number; points: number; drivers: string; isComplete: number;
   }>(`
     SELECT
       YEAR(gp.date) AS year,
@@ -502,7 +503,8 @@ export async function getConstructorSeasons(constructorId: number) {
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
       SUM(${totalPts()}) AS points,
-      GROUP_CONCAT(DISTINCT CONCAT(d.firstName, ' ', d.surname) ORDER BY d.surname SEPARATOR ', ') AS drivers
+      GROUP_CONCAT(DISTINCT CONCAT(d.firstName, ' ', d.surname) ORDER BY d.surname SEPARATOR ', ') AS drivers,
+      YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
     FROM entrants e
     JOIN constructors c ON e.constructor_id = c.id
     JOIN results r ON r.entrant_id = e.id
@@ -625,7 +627,7 @@ export async function getAllSeasons(): Promise<{ year: number; races: number; dr
   const [seasons, winners] = await Promise.all([
     query<{ year: number; races: number; drivers: number; isComplete: number }>(`
       SELECT YEAR(gp.date) AS year, COUNT(DISTINCT gp.id) AS races, COUNT(DISTINCT r.driver_id) AS drivers,
-        MAX(gp.date) < CURDATE() AS isComplete
+        YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
       FROM grandsprix gp JOIN results r ON r.grandprix_id = gp.id
       GROUP BY YEAR(gp.date) ORDER BY year DESC
     `),

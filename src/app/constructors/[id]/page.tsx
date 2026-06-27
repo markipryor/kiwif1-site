@@ -130,9 +130,14 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
             {seasons.map((s) => (
               <tr key={s.year} className="hover:bg-zinc-900/60 transition-colors">
                 <td className="py-2.5">
-                  <Link href={`/seasons/${s.year}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                    {s.year}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/seasons/${s.year}/`} className="text-white font-medium hover:text-red-400 transition-colors">
+                      {s.year}
+                    </Link>
+                    {!s.isComplete && (
+                      <span className="text-xs bg-blue-900/40 text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded-full leading-none">In Progress</span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-2.5 text-zinc-400 text-sm">{s.drivers}</td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
