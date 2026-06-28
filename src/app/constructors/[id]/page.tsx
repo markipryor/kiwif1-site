@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllConstructors, getConstructorById, getConstructorSeasons, getConstructorChain } from "@/lib/queries";
+import { getAllConstructors, getConstructorById, getConstructorSeasons, getConstructorChain, getConstructorSeasonDrivers, getConstructorRanks } from "@/lib/queries";
 import { getBuildConfig, getSeed } from "@/lib/build-config";
+import ConstructorSeasonTable from "./ConstructorSeasonTable";
 
 export async function generateStaticParams() {
   const cfg = getBuildConfig();
@@ -32,10 +33,12 @@ function yearLabel(start: number, end: number | "present") {
 
 export default async function ConstructorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [constructor, seasons, chain] = await Promise.all([
+  const [constructor, seasons, seasonDrivers, chain, ranks] = await Promise.all([
     getConstructorById(Number(id)),
     getConstructorSeasons(Number(id)),
+    getConstructorSeasonDrivers(Number(id)),
     getConstructorChain(Number(id)),
+    getConstructorRanks(Number(id)),
   ]);
 
   if (!constructor) notFound();
@@ -50,14 +53,16 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
     return { ...row, start, end };
   });
 
-  const stats = [
-    { label: "Races", value: constructor.races },
-    { label: "Wins", value: constructor.wins },
-    { label: "Podiums", value: constructor.podiums },
-    { label: "Points", value: Number(constructor.points).toFixed(0) },
-    { label: "Drivers", value: constructor.drivers },
-    { label: "First season", value: constructor.firstSeason },
-    { label: "Last season", value: constructor.lastSeason },
+  const isCurrent = Boolean(constructor.current);
+
+  const statBoxes = [
+    { label: "Races", value: constructor.races, rank: ranks?.racesRank },
+    { label: "Wins", value: constructor.wins, rank: ranks?.winsRank },
+    { label: "Podiums", value: constructor.podiums, rank: ranks?.podiumsRank },
+    { label: "Points", value: Number(constructor.points).toFixed(0), rank: ranks?.pointsRank },
+    { label: "Poles", value: constructor.poles, rank: ranks?.polesRank },
+    { label: "Fastest Laps", value: constructor.fastestLaps, rank: ranks?.fastestLapsRank },
+    { label: "Drivers", value: constructor.drivers, rank: undefined },
   ];
 
   return (
@@ -73,13 +78,25 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
         <h1 className="text-4xl font-bold text-white">{constructor.name}</h1>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-12">
-        {stats.map((s) => (
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">
+        {statBoxes.map((s) => (
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-center">
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
+            {s.rank != null && (
+              <p className="text-zinc-600 text-xs mt-1">#{s.rank} all-time</p>
+            )}
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm mb-10">
+        {constructor.firstRaceTitle && (
+          <span><span className="text-zinc-600">First race:</span> <span className="text-zinc-300">{constructor.firstRaceTitle} ({constructor.firstSeason})</span></span>
+        )}
+        {constructor.lastRaceTitle && (
+          <span><span className="text-zinc-600">{isCurrent ? "Latest race:" : "Last race:"}</span> <span className="text-zinc-300">{constructor.lastRaceTitle} ({constructor.lastSeason})</span></span>
+        )}
       </div>
 
       {chainWithYears.length > 1 && (
@@ -114,43 +131,7 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
       )}
 
       <h2 className="text-lg font-bold text-white mb-4">Season by Season</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-              <th className="pb-3 text-left">Year</th>
-              <th className="pb-3 text-left">Drivers</th>
-              <th className="pb-3 text-right">Races</th>
-              <th className="pb-3 text-right">Wins</th>
-              <th className="pb-3 text-right">Podiums</th>
-              <th className="pb-3 text-right">Points</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/60">
-            {seasons.map((s) => (
-              <tr key={s.year} className="hover:bg-zinc-900/60 transition-colors">
-                <td className="py-2.5">
-                  <div className="flex items-center gap-2">
-                    <Link href={`/seasons/${s.year}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                      {s.year}
-                    </Link>
-                    {!s.isComplete && (
-                      <span className="text-xs bg-blue-900/40 text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded-full leading-none">In Progress</span>
-                    )}
-                  </div>
-                </td>
-                <td className="py-2.5 text-zinc-400 text-sm">{s.drivers}</td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
-                <td className="py-2.5 text-right font-mono">
-                  <span className={Number(s.wins) > 0 ? "text-white font-semibold" : "text-zinc-500"}>{s.wins}</span>
-                </td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.podiums}</td>
-                <td className="py-2.5 text-zinc-400 text-right font-mono">{Number(s.points).toFixed(0)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ConstructorSeasonTable seasons={seasons} driverRows={seasonDrivers} />
     </div>
   );
 }

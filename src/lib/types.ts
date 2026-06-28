@@ -40,9 +40,12 @@ export interface ConstructorStats {
   wins: number;
   podiums: number;
   poles: number;
+  fastestLaps: number;
   points: number;
   firstSeason: number;
   lastSeason: number;
+  firstRaceTitle?: string | null;
+  lastRaceTitle?: string | null;
   drivers: number;
 }
 

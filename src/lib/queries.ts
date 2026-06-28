@@ -474,10 +474,13 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
-      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN pt.grandprix_id END) AS poles,
+      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+      COUNT(fl.grandprix_id) AS fastestLaps,
       SUM(${totalPts()}) AS points,
       MIN(YEAR(gp.date)) AS firstSeason,
       MAX(YEAR(gp.date)) AS lastSeason,
+      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle,
       COUNT(DISTINCT r.driver_id) AS drivers
     FROM constructors c
     LEFT JOIN nationalities n ON c.nationality_id = n.id
@@ -486,7 +489,6 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
-    LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
     WHERE c.id = ?
     GROUP BY c.id
   `, [id]);
@@ -495,16 +497,44 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
 
 export async function getConstructorSeasons(constructorId: number) {
   return query<{
-    year: number; races: number; wins: number; podiums: number; points: number; drivers: string; isComplete: number;
+    year: number; races: number; wins: number; podiums: number; poles: number; fastestLaps: number; points: number; isComplete: number;
   }>(`
     SELECT
       YEAR(gp.date) AS year,
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+      COUNT(fl.grandprix_id) AS fastestLaps,
       SUM(${totalPts()}) AS points,
-      GROUP_CONCAT(DISTINCT CONCAT(d.firstName, ' ', d.surname) ORDER BY d.surname SEPARATOR ', ') AS drivers,
       YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
+    FROM entrants e
+    JOIN constructors c ON e.constructor_id = c.id
+    JOIN results r ON r.entrant_id = e.id
+    JOIN grandsprix gp ON r.grandprix_id = gp.id
+    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+    WHERE c.id = ?
+    GROUP BY YEAR(gp.date)
+    ORDER BY year DESC
+  `, [constructorId]);
+}
+
+export async function getConstructorSeasonDrivers(constructorId: number) {
+  return query<{
+    year: number; driverId: number; driver: string;
+    races: number; wins: number; podiums: number; poles: number; fastestLaps: number; points: number;
+  }>(`
+    SELECT
+      YEAR(gp.date) AS year,
+      d.id AS driverId,
+      CONCAT(d.firstName, ' ', d.surname) AS driver,
+      COUNT(DISTINCT r.grandprix_id) AS races,
+      SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
+      SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+      COUNT(fl.grandprix_id) AS fastestLaps,
+      SUM(${totalPts()}) AS points
     FROM entrants e
     JOIN constructors c ON e.constructor_id = c.id
     JOIN results r ON r.entrant_id = e.id
@@ -513,9 +543,51 @@ export async function getConstructorSeasons(constructorId: number) {
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
     WHERE c.id = ?
-    GROUP BY YEAR(gp.date)
-    ORDER BY year DESC
+    GROUP BY YEAR(gp.date), d.id
+    ORDER BY YEAR(gp.date) DESC, points DESC
   `, [constructorId]);
+}
+
+type ConstructorRanks = { racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
+let _constructorRanksCache: Map<number, ConstructorRanks> | null = null;
+
+async function _getAllConstructorRanks(): Promise<Map<number, ConstructorRanks>> {
+  if (_constructorRanksCache) return _constructorRanksCache;
+  const rows = await query<{ constructor_id: number } & ConstructorRanks>(`
+    WITH totals AS (
+      SELECT e.constructor_id,
+        COUNT(DISTINCT r.grandprix_id) AS races,
+        SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+        SUM(${totalPts()}) AS points,
+        COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+        COUNT(fl.grandprix_id) AS fastestLaps
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN entrants e ON r.entrant_id = e.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      GROUP BY e.constructor_id
+    )
+    SELECT constructor_id,
+      CAST(RANK() OVER (ORDER BY races DESC) AS UNSIGNED) AS racesRank,
+      CAST(RANK() OVER (ORDER BY wins DESC) AS UNSIGNED) AS winsRank,
+      CAST(RANK() OVER (ORDER BY podiums DESC) AS UNSIGNED) AS podiumsRank,
+      CAST(RANK() OVER (ORDER BY points DESC) AS UNSIGNED) AS pointsRank,
+      CAST(RANK() OVER (ORDER BY poles DESC) AS UNSIGNED) AS polesRank,
+      CAST(RANK() OVER (ORDER BY fastestLaps DESC) AS UNSIGNED) AS fastestLapsRank
+    FROM totals
+  `);
+  _constructorRanksCache = new Map(rows.map((r) => [r.constructor_id, {
+    racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank, pointsRank: r.pointsRank,
+    polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank,
+  }]));
+  return _constructorRanksCache;
+}
+
+export async function getConstructorRanks(constructorId: number): Promise<ConstructorRanks | null> {
+  const map = await _getAllConstructorRanks();
+  return map.get(constructorId) ?? null;
 }
 
 export async function getConstructorChain(id: number) {

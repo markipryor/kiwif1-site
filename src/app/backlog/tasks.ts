@@ -56,10 +56,10 @@ export const sections: Section[] = [
       { id: "KF1-C-03", title: "Flag icons",                           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show a nationality flag beside each constructor." },
       { id: "KF1-C-04", title: "Champion icons",                       complexity: "S", status: "done", version: "v6.0.10beta", description: "Visual indicator for constructors who have won the Constructors' Championship." },
       { id: "KF1-C-05", title: "More nationality data",                complexity: "S", status: "pending", description: "Expand nationality coverage — many constructors currently have no nationality set." },
-      { id: "KF1-C-06", title: "Simplify multi-line displays",         complexity: "S", status: "pending", description: "The driver list in season-by-season rows can be very long — truncate or collapse it." },
+      { id: "KF1-C-06", title: "Simplify multi-line displays",         complexity: "S", status: "done", version: "v6.0.12beta", description: "The driver list in season-by-season rows can be very long — truncate or collapse it." },
       { id: "KF1-C-07", title: "Full names and short names",           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show both the full constructor name and short name where space allows; use short name in compact views." },
-      { id: "KF1-C-08", title: "Season stats broken down by driver",   complexity: "M", status: "pending", description: "Expand each season row on the constructor detail page to show each driver's individual contribution." },
-      { id: "KF1-C-09", title: "Add ranks",                           complexity: "S", status: "pending", description: "Show all-time rank for each stat (wins, podiums, points, titles) on the constructor detail page." },
+      { id: "KF1-C-08", title: "Season stats broken down by driver",   complexity: "M", status: "done", version: "v6.0.12beta", description: "Expand each season row on the constructor detail page to show each driver's individual contribution. Poles and fastest laps columns added." },
+      { id: "KF1-C-09", title: "Add ranks",                           complexity: "S", status: "done", version: "v6.0.12beta", description: "Show all-time rank for each stat (races, wins, podiums, points, poles, fastest laps) on the constructor detail page stat boxes." },
       { id: "KF1-C-10", title: "History data for all teams",          complexity: "L", status: "pending", description: "Add formedFrom/became chain data for all relevant constructor lineages, not just Mercedes." },
       { id: "KF1-C-BUG-01", title: "Bug: Some constructor names not showing", complexity: "S", status: "done", version: "v6.0.6beta", description: "Constructor names are blank in some places — likely rows where both name and shortName are empty, or a JOIN returning null." },
     ],
@@ -126,6 +126,15 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.0.12beta",
+    changes: [
+      "Constructor pages: Season-by-season table now has expandable rows showing each driver's individual stats (races, wins, podiums, poles, fastest laps, points)",
+      "Constructor pages: Poles and Fastest Laps columns added to season table",
+      "Constructor pages: Stat boxes now show all-time rank (#N all-time) for races, wins, podiums, points, poles, and fastest laps",
+      "Constructor pages: First/Last season moved from boxes to plain text below the stat grid; Poles and Fastest Laps boxes added in their place",
+    ],
+  },
   {
     version: "v6.0.11beta",
     changes: [
@@ -235,6 +244,9 @@ export const deployed: { version: string; changes: string[] }[] = [
 ];
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-C-06", title: "Simplify multi-line displays", version: "v6.0.12beta" },
+  { id: "KF1-C-08", title: "Season stats broken down by driver", version: "v6.0.12beta" },
+  { id: "KF1-C-09", title: "Add ranks", version: "v6.0.12beta" },
   { id: "KF1-S-ENH-01", title: "Show championship leader for current season", version: "v6.0.11beta" },
   { id: "KF1-C-01", title: "Make columns sortable", version: "v6.0.10beta" },
   { id: "KF1-C-02", title: "Add filters", version: "v6.0.10beta" },
