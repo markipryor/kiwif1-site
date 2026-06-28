@@ -224,7 +224,7 @@ export async function getDriverSeasonPositions(driverId: number): Promise<{ year
 
 // ─── Driver ranks & race results ──────────────────────────────────────────────
 
-type DriverRanks = { winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
+type DriverRanks = { racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
 let _ranksCache: Map<number, DriverRanks> | null = null;
 
 async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
@@ -233,6 +233,7 @@ async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
     WITH driver_totals AS (
       SELECT
         r.driver_id,
+        COUNT(DISTINCT r.grandprix_id) AS races,
         SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
         SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
         SUM(${totalPts()}) AS points,
@@ -247,6 +248,7 @@ async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
     )
     SELECT
       driver_id,
+      CAST(RANK() OVER (ORDER BY races DESC) AS UNSIGNED) AS racesRank,
       CAST(RANK() OVER (ORDER BY wins DESC) AS UNSIGNED) AS winsRank,
       CAST(RANK() OVER (ORDER BY podiums DESC) AS UNSIGNED) AS podiumsRank,
       CAST(RANK() OVER (ORDER BY points DESC) AS UNSIGNED) AS pointsRank,
@@ -254,13 +256,13 @@ async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
       CAST(RANK() OVER (ORDER BY poles DESC) AS UNSIGNED) AS polesRank
     FROM driver_totals
   `);
-  _ranksCache = new Map(rows.map((r) => [r.driver_id, { winsRank: r.winsRank, podiumsRank: r.podiumsRank, pointsRank: r.pointsRank, polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank }]));
+  _ranksCache = new Map(rows.map((r) => [r.driver_id, { racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank, pointsRank: r.pointsRank, polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank }]));
   return _ranksCache;
 }
 
 export async function getDriverRanks(driverId: number): Promise<DriverRanks> {
   const cache = await _getAllDriverRanks();
-  return cache.get(driverId) ?? { winsRank: 0, podiumsRank: 0, pointsRank: 0, polesRank: 0, fastestLapsRank: 0 };
+  return cache.get(driverId) ?? { racesRank: 0, winsRank: 0, podiumsRank: 0, pointsRank: 0, polesRank: 0, fastestLapsRank: 0 };
 }
 
 export async function getDriverRaceResults(driverId: number): Promise<{
@@ -357,10 +359,10 @@ export async function getDriverById(id: number): Promise<(Driver & DriverStats) 
 export async function getDriverSeasons(driverId: number) {
   return query<{
     year: number; constructor: string; constructorId: number;
-    races: number; wins: number; podiums: number; points: number;
+    races: number; wins: number; podiums: number; poles: number; fastestLaps: number; points: number;
     isComplete: number; teammates: string | null;
   }>(`
-    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.points, s.isComplete, tm.teammates
+    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.poles, s.fastestLaps, s.points, s.isComplete, tm.teammates
     FROM (
       SELECT
         YEAR(gp.date) AS year,
@@ -369,6 +371,8 @@ export async function getDriverSeasons(driverId: number) {
         COUNT(DISTINCT r.grandprix_id) AS races,
         SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
         SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+        COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+        COUNT(fl.grandprix_id) AS fastestLaps,
         SUM(${totalPts()}) AS points,
         YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
       FROM results r

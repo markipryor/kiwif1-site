@@ -10,6 +10,8 @@ type SeasonRow = {
   races: number;
   wins: number;
   podiums: number;
+  poles: number;
+  fastestLaps: number;
   points: number;
   isComplete: number;
   teammates: string | null;
@@ -72,8 +74,10 @@ export default function DriverSeasonTable({
             <th className="pb-3 text-left pl-4">Teammate(s)</th>
             <th className="pb-3 text-right">Races</th>
             <th className="pb-3 text-right">Wins</th>
-            <th className="pb-3 text-right">Podiums</th>
-            <th className="pb-3 text-right">Points</th>
+            <th className="pb-3 text-right">Pods</th>
+            <th className="pb-3 text-right">Poles</th>
+            <th className="pb-3 text-right">FL</th>
+            <th className="pb-3 text-right">Pts</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800/60">
@@ -132,7 +136,9 @@ export default function DriverSeasonTable({
                     {s.wins}
                   </span>
                 </td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.podiums}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.podiums || <span className="text-zinc-600">—</span>}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono">{Number(s.poles) > 0 ? s.poles : <span className="text-zinc-600">—</span>}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono">{Number(s.fastestLaps) > 0 ? s.fastestLaps : <span className="text-zinc-600">—</span>}</td>
                 <td className="py-2.5 text-zinc-400 text-right font-mono">{Number(s.points).toFixed(0)}</td>
               </tr>,
             ];
@@ -141,7 +147,7 @@ export default function DriverSeasonTable({
               const races = resultsByYear.get(s.year) ?? [];
               rows.push(
                 <tr key={`${s.year}-races`}>
-                  <td colSpan={8} className="pb-3 pt-0">
+                  <td colSpan={10} className="pb-3 pt-0">
                     <div className="ml-5 mt-1 bg-zinc-950/60 rounded-lg border border-zinc-800/40 overflow-hidden">
                       <table className="w-full text-xs">
                         <thead>

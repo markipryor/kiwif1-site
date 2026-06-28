@@ -40,7 +40,7 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
   if (!driver) notFound();
 
   const stats = [
-    { label: "Races", value: driver.races },
+    { label: "Races", value: driver.races, rank: ranks.racesRank },
     { label: "Wins", value: driver.wins, rank: Number(driver.wins) > 0 ? ranks.winsRank : null },
     { label: "Podiums", value: driver.podiums, rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null },
     { label: "Poles", value: driver.poles, rank: Number(driver.poles) > 0 ? ranks.polesRank : null },
@@ -101,12 +101,20 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm text-zinc-500 mb-12">
+      <div className="flex flex-col gap-1 text-sm text-zinc-500 mb-12">
         {driver.firstRaceTitle && (
-          <span><span className="text-zinc-600">First race:</span> {driver.firstRaceTitle} ({driver.firstRace})</span>
+          <span>
+            <span className="text-zinc-600">First race:</span>{" "}
+            {driver.firstRaceTitle}
+            {!driver.firstRaceTitle.includes(String(driver.firstRace)) && ` (${driver.firstRace})`}
+          </span>
         )}
         {driver.lastRaceTitle && (
-          <span><span className="text-zinc-600">{Boolean(driver.current) ? "Latest race:" : "Last race:"}</span> {driver.lastRaceTitle} ({driver.lastRace})</span>
+          <span>
+            <span className="text-zinc-600">{Boolean(driver.current) ? "Latest race:" : "Last race:"}</span>{" "}
+            {driver.lastRaceTitle}
+            {!driver.lastRaceTitle.includes(String(driver.lastRace)) && ` (${driver.lastRace})`}
+          </span>
         )}
       </div>
 
