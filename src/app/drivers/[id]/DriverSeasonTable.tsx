@@ -92,17 +92,13 @@ export default function DriverSeasonTable({
               <tr key={`${s.year}-${s.constructorId}`} className="hover:bg-zinc-900/60 transition-colors">
                 <td className="py-2.5">
                   <div className="flex items-center gap-1.5">
-                    {isFirstForYear ? (
-                      <button
-                        onClick={() => toggle(s.year)}
-                        className="text-zinc-600 hover:text-zinc-400 text-xs w-3 shrink-0 transition-colors"
-                        aria-label={isExpanded ? "Collapse" : "Expand"}
-                      >
-                        {isExpanded ? "▼" : "▶"}
-                      </button>
-                    ) : (
-                      <span className="w-3 shrink-0" />
-                    )}
+                    <button
+                      onClick={() => toggle(s.year)}
+                      className="text-zinc-600 hover:text-zinc-400 text-xs w-3 shrink-0 transition-colors"
+                      aria-label={isExpanded ? "Collapse" : "Expand"}
+                    >
+                      {isExpanded ? "▼" : "▶"}
+                    </button>
                     <Link
                       href={`/seasons/${s.year}/`}
                       className="text-white font-medium hover:text-red-400 transition-colors"
