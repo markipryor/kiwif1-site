@@ -279,7 +279,9 @@ export async function getDriverRaceResults(driverId: number): Promise<{
         WHEN gp.fullTitle IS NOT NULL AND gp.fullTitle != '' THEN gp.fullTitle
         WHEN gp.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp.date), ' Indianapolis 500')
         WHEN n.adjective = 'American' THEN CONCAT(YEAR(gp.date), ' United States Grand Prix')
-        ELSE CONCAT(YEAR(gp.date), ' ', n.adjective, ' Grand Prix')
+        WHEN n.adjective IS NOT NULL THEN CONCAT(YEAR(gp.date), ' ', n.adjective, ' Grand Prix')
+        WHEN gp.shortTitle IS NOT NULL AND gp.shortTitle != '' THEN CONCAT(YEAR(gp.date), ' ', gp.shortTitle, ' Grand Prix')
+        ELSE CONCAT(YEAR(gp.date), ' Grand Prix')
       END AS raceTitle,
       r.grid,
       r.place,
@@ -287,9 +289,9 @@ export async function getDriverRaceResults(driverId: number): Promise<{
       CASE WHEN fl.driver_id IS NOT NULL THEN 1 ELSE 0 END AS hasFastestLap
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
-    JOIN circuitlayouts cl ON gp.circuitlayout_id = cl.id
-    JOIN circuits ci ON cl.circuit_id = ci.id
-    JOIN nationalities n ON ci.nationality_id = n.id
+    LEFT JOIN circuitlayouts cl ON gp.circuitlayout_id = cl.id AND gp.circuitlayout_id != 0
+    LEFT JOIN circuits ci ON cl.circuit_id = ci.id
+    LEFT JOIN nationalities n ON ci.nationality_id = n.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
     WHERE r.driver_id = ?
@@ -341,8 +343,8 @@ export async function getDriverById(id: number): Promise<(Driver & DriverStats) 
       COUNT(DISTINCT YEAR(gp.date)) AS seasons,
       MIN(YEAR(gp.date)) AS firstRace,
       MAX(YEAR(gp.date)) AS lastRace,
-      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id WHERE r2.driver_id = d.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
-      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id WHERE r2.driver_id = d.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle
+      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle
     FROM drivers d
     JOIN nationalities n ON d.nationality_id = n.id
     JOIN results r ON r.driver_id = d.id
@@ -483,8 +485,8 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
       SUM(${totalPts()}) AS points,
       MIN(YEAR(gp.date)) AS firstSeason,
       MAX(YEAR(gp.date)) AS lastSeason,
-      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
-      (SELECT COALESCE(gp2.fullTitle, gp2.shortTitle) FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle,
+      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle,
       COUNT(DISTINCT r.driver_id) AS drivers
     FROM constructors c
     LEFT JOIN nationalities n ON c.nationality_id = n.id
