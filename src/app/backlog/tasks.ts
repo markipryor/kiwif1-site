@@ -1,5 +1,5 @@
 export type Complexity = "S" | "M" | "L" | "XL";
-export type Status = "pending" | "done";
+export type Status = "pending" | "deployed" | "done";
 
 export interface Task {
   id: string;
@@ -330,6 +330,10 @@ export const deployed: { version: string; changes: string[] }[] = [
     ],
   },
 ];
+
+export const deployedTasks = sections.flatMap((s) =>
+  s.tasks.filter((t) => t.status === "deployed").map((t) => ({ ...t, section: s.label }))
+);
 
 export const done: { id: string; title: string; version: string }[] = [
   { id: "KF1-COMP-ENH-05", title: "Versus all teammates page", version: "v6.1.0" },

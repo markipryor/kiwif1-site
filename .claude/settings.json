@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(C:\\Users\\markp\\kiwif1-site\\*)",
+      "Write(C:\\Users\\markp\\kiwif1-site\\*)",
+      "PowerShell(cd C:\\Users\\markp\\kiwif1-site*)"
+    ]
+  }
+}

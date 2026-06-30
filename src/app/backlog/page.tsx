@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { sections, deployed, done } from "./tasks";
+import { sections, deployed, done, deployedTasks } from "./tasks";
 
 export const metadata = { title: "Upcoming Features — KiwiF1" };
 
@@ -54,6 +54,33 @@ export default function BacklogPage() {
           </div>
         );
       })}
+
+      {deployedTasks.length > 0 && (
+        <div className="mt-10 pt-8 border-t border-amber-800/40">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">
+            Deployed — awaiting confirmation
+          </h2>
+          <div className="space-y-3">
+            {deployedTasks.map((task) => (
+              <div key={task.id} className="bg-zinc-900 border border-amber-700/30 rounded-lg px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-zinc-600 text-xs font-mono">{task.id}</span>
+                      <span className="text-white font-semibold text-sm">{task.title}</span>
+                      <span className="text-amber-500 text-xs bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">⏳ deployed</span>
+                    </div>
+                    <p className="text-zinc-500 text-xs leading-relaxed">{task.description}</p>
+                  </div>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded font-mono shrink-0 ${complexityColour[task.complexity]}`}>
+                    {task.complexity}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-12 pt-8 border-t border-zinc-800">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-6">Deployed Features</h2>

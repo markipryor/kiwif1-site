@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { sections, done } from "../tasks";
+import { sections, done, deployedTasks } from "../tasks";
 
 export const metadata = { title: "Kanban — KiwiF1" };
 
@@ -30,10 +30,10 @@ const columns = [
     tasks: allPending,
   },
   {
-    label: "In Progress",
-    colour: "border-blue-700",
-    headerColour: "text-blue-400",
-    tasks: [] as typeof allPending,
+    label: "Deployed ⏳",
+    colour: "border-amber-700",
+    headerColour: "text-amber-400",
+    tasks: deployedTasks,
   },
   {
     label: "Done",
