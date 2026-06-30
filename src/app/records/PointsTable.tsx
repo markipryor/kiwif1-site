@@ -12,7 +12,7 @@ function fmt(n: number | string) {
   return v % 1 === 0 ? v.toFixed(0) : v.toString();
 }
 
-export default function PointsTable({ rows }: { rows: Row[] }) {
+export default function PointsTable({ rows, showTitle = true }: { rows: Row[]; showTitle?: boolean }) {
   const [sortCol, setSortCol] = useState<SortCol>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -58,7 +58,7 @@ export default function PointsTable({ rows }: { rows: Row[] }) {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-white mb-4">Most Points</h2>
+      {showTitle && <h2 className="text-lg font-bold text-white mb-4">Most Points</h2>}
       <div className="flex items-center gap-4 px-4 mb-2">
         <span className="w-5" />
         <ColHeader col="name" label="Driver" className="flex-1 text-left" />

@@ -851,13 +851,13 @@ export async function getRecords() {
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
              SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS value
       FROM results r JOIN drivers d ON r.driver_id = d.id
-      GROUP BY d.id HAVING value > 0 ORDER BY value DESC LIMIT 20
+      GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
     query<{ driverId: number; name: string; value: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
              SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS value
       FROM results r JOIN drivers d ON r.driver_id = d.id
-      GROUP BY d.id HAVING value > 0 ORDER BY value DESC LIMIT 20
+      GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
     query<{ driverId: number; name: string; value: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
@@ -866,13 +866,13 @@ export async function getRecords() {
       JOIN grandsprix gp ON pt.grandprix_id = gp.id
       JOIN results r ON r.grandprix_id = gp.id AND r.grid = '1'
       JOIN drivers d ON r.driver_id = d.id
-      GROUP BY d.id ORDER BY value DESC LIMIT 20
+      GROUP BY d.id ORDER BY value DESC
     `),
     query<{ driverId: number; name: string; value: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
              COUNT(*) AS value
       FROM fastestlaps fl JOIN drivers d ON fl.driver_id = d.id
-      GROUP BY d.id ORDER BY value DESC LIMIT 20
+      GROUP BY d.id ORDER BY value DESC
     `),
     query<{ driverId: number; name: string; value: number; pts2026: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
@@ -883,13 +883,13 @@ export async function getRecords() {
       JOIN drivers d ON r.driver_id = d.id
       LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
       LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
-      GROUP BY d.id HAVING value > 0 ORDER BY value DESC LIMIT 20
+      GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
     query<{ driverId: number; name: string; value: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
              COUNT(*) AS value
       FROM results r JOIN drivers d ON r.driver_id = d.id
-      GROUP BY d.id ORDER BY value DESC LIMIT 20
+      GROUP BY d.id HAVING value >= 5 ORDER BY value DESC
     `),
   ]);
   return { wins, podiums, poles, fastestLaps, points, races };

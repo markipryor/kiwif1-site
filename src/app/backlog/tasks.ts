@@ -116,9 +116,9 @@ export const sections: Section[] = [
   {
     label: "Records",
     tasks: [
-      { id: "KF1-R-01", title: "Full list pages per record", complexity: "S", status: "pending", description: "Add a 'More' link on each record card to a dedicated page listing all drivers with more than 0 for that stat." },
+      { id: "KF1-R-01", title: "Full list pages per record", complexity: "S", status: "done", version: "v6.3.0", description: "Add a 'More' link on each record card to a dedicated page listing all drivers with more than 0 for that stat." },
       { id: "KF1-R-02", title: "Additional records",         complexity: "M", status: "pending", description: "Add new record categories: most grand slams (win + pole + fastest lap + led every lap), most race starts without a win, and others." },
-      { id: "KF1-R-03", title: "Reformat records page into categories", complexity: "M", status: "pending", description: "Restructure the records page into distinct sections: Most (wins, podiums, poles, fastest laps, points, races), Firsts (first win, first pole, etc.), Oldest/Youngest (oldest winner, youngest champion, etc.). Each section gets its own heading and layout." },
+      { id: "KF1-R-03", title: "Reformat records page into categories", complexity: "M", status: "done", version: "v6.3.0", description: "Restructure the records page into distinct sections: Most (wins, podiums, poles, fastest laps, points, races), Firsts (first win, first pole, etc.), Oldest/Youngest (oldest winner, youngest champion, etc.). Each section gets its own heading and layout." },
     ],
   },
   {
@@ -146,6 +146,7 @@ export const sections: Section[] = [
   {
     label: "2026 Race Data",
     tasks: [
+      { id: "KF1-2026-R07", title: "Enter results: R7 Spanish GP (14 Jun)",        complexity: "S", status: "done",    version: "14 Jun 2026", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Spanish Grand Prix (grandprix id 1156, 14 June 2026)." },
       { id: "KF1-2026-R08", title: "Enter results: R8 Austrian GP (28 Jun)",        complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Austrian Grand Prix (grandprix id 1157, 28 June 2026)." },
       { id: "KF1-2026-R09", title: "Enter results: R9 British GP (5 Jul)",           complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 British Grand Prix (grandprix id 1158, 5 July 2026)." },
       { id: "KF1-2026-R10", title: "Enter results: R10 Belgian GP (19 Jul)",         complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Belgian Grand Prix (grandprix id 1159, 19 July 2026)." },
@@ -336,6 +337,9 @@ export const deployedTasks = sections.flatMap((s) =>
 );
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-R-01", title: "Full list pages per record", version: "v6.3.0" },
+  { id: "KF1-R-03", title: "Reformat records page into categories", version: "v6.3.0" },
+  { id: "KF1-2026-R07", title: "Enter results: R7 Spanish GP (14 Jun)", version: "14 Jun 2026" },
   { id: "KF1-COMP-ENH-05", title: "Versus all teammates page", version: "v6.1.0" },
   { id: "KF1-COMP-ENH-04", title: "Race count next to year on comparison page", version: "v6.1.0" },
   { id: "KF1-COMP-ENH-03", title: "Add finishing position comparison", version: "v6.1.0" },
