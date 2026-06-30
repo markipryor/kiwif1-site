@@ -77,7 +77,9 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
             </div>
             <div className="hidden sm:flex gap-5 text-xs text-zinc-400 text-right">
               <div><p className="text-white font-medium">{d.wins}</p><p>Wins</p></div>
-              <div><p className="text-white font-medium">{d.podiums}</p><p>Podiums</p></div>
+              <div><p className="text-white font-medium">{d.podiums}</p><p>Pods</p></div>
+              {Number(d.poles) > 0 && <div><p className="text-white font-medium">{d.poles}</p><p>Poles</p></div>}
+              {Number(d.fastestLaps) > 0 && <div><p className="text-white font-medium">{d.fastestLaps}</p><p>FL</p></div>}
             </div>
             <div className="text-right min-w-[60px]">
               <p className="text-white font-bold text-lg">{Number(d.points).toFixed(0)}</p>

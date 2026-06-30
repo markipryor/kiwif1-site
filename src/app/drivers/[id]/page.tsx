@@ -96,7 +96,7 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
             {"rank" in s && s.rank != null && (
-              <p className="text-zinc-400 text-xs mt-0.5">#{s.rank} all-time</p>
+              <p className={`text-xs mt-0.5 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</p>
             )}
           </div>
         ))}
@@ -118,6 +118,19 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
         )}
       </div>
 
+      {/* Head to Head */}
+      {teammates.length > 0 && (
+        <>
+          <h2 className="text-lg font-bold text-white mb-4">Head to Head</h2>
+          <Link
+            href={`/comparisons/${id}/`}
+            className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-lg px-4 py-2 text-sm text-zinc-300 hover:text-white transition-colors mb-12"
+          >
+            vs {teammates.length} teammate{teammates.length !== 1 ? "s" : ""} →
+          </Link>
+        </>
+      )}
+
       {/* Season breakdown */}
       <h2 className="text-lg font-bold text-white mb-4">Season by Season</h2>
       <DriverSeasonTable
@@ -125,28 +138,6 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
         raceResults={raceResults}
         seasonPositions={seasonPositions}
       />
-
-      {/* Teammates */}
-      {teammates.length > 0 && (
-        <>
-          <h2 className="text-lg font-bold text-white mb-4">Teammates</h2>
-          <div className="flex flex-wrap gap-2">
-            {teammates.map((t) => {
-              const pairA = Math.min(Number(id), t.id);
-              const pairB = Math.max(Number(id), t.id);
-              return (
-                <Link
-                  key={t.id}
-                  href={`/comparisons/${pairA}-vs-${pairB}/`}
-                  className="bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-lg px-4 py-2 text-sm text-zinc-300 hover:text-white transition-colors"
-                >
-                  vs {t.firstName} {t.surname}
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
     </div>
   );
 }

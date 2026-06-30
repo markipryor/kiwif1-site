@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 
 export type DriversRow = {
@@ -51,20 +51,24 @@ function Toggle({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-function Stars({ count }: { count: number }) {
-  if (count === 0) return null;
-  return (
-    <span className="text-amber-400 text-xs leading-none shrink-0" title={`${count}× World Champion`}>
-      {"★".repeat(count)}
-    </span>
-  );
-}
-
 export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
   const [sortCol, setSortCol] = useState<SortCol>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showIndy, setShowIndy] = useState(false);
   const [currentOnly, setCurrentOnly] = useState(false);
+  const [nationality, setNationality] = useState("");
+
+  const nationalities = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const d of drivers) {
+      if (d.nationality && !seen.has(d.nationality)) {
+        seen.add(d.nationality);
+        list.push(d.nationality);
+      }
+    }
+    return list.sort();
+  }, [drivers]);
 
   function handleSort(col: SortCol) {
     if (col === sortCol) {
@@ -77,7 +81,8 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
 
   const filtered = drivers
     .filter((d) => showIndy || !d.indyOnly)
-    .filter((d) => !currentOnly || d.current);
+    .filter((d) => !currentOnly || d.current)
+    .filter((d) => !nationality || d.nationality === nationality);
 
   const sorted = [...filtered].sort((a, b) => {
     let cmp: number;
@@ -90,6 +95,18 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
+
+  const totals = sorted.reduce(
+    (acc, d) => ({
+      races: acc.races + Number(d.races),
+      wins: acc.wins + Number(d.wins),
+      podiums: acc.podiums + Number(d.podiums),
+      poles: acc.poles + Number(d.poles),
+      fastestLaps: acc.fastestLaps + Number(d.fastestLaps),
+      points: acc.points + Number(d.points),
+    }),
+    { races: 0, wins: 0, podiums: 0, poles: 0, fastestLaps: 0, points: 0 }
+  );
 
   function Th({ col, label, right }: { col: SortCol; label: string; right?: boolean }) {
     return (
@@ -109,9 +126,19 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-zinc-500 text-sm">{sorted.length.toLocaleString()} drivers</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={nationality}
+            onChange={(e) => setNationality(e.target.value)}
+            className="text-xs px-3 py-1.5 rounded-lg border bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500 focus:outline-none focus:border-zinc-500"
+          >
+            <option value="">All nationalities</option>
+            {nationalities.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
           <Toggle active={currentOnly} onClick={() => setCurrentOnly((v) => !v)}>
             Current drivers only ({currentCount})
           </Toggle>
@@ -179,6 +206,18 @@ export default function DriversTable({ drivers }: { drivers: DriversRow[] }) {
                 <td className="py-2.5 text-zinc-400 text-right font-mono">{fmt(d.points)}</td>
               </tr>
             ))}
+            <tr className="border-t-2 border-zinc-700 text-zinc-500 text-xs">
+              <td className="py-2"></td>
+              <td className="py-2 text-zinc-400 font-medium">Total ({sorted.length})</td>
+              <td className="py-2"></td>
+              <td className="py-2"></td>
+              <td className="py-2 text-right font-mono">{totals.races.toLocaleString()}</td>
+              <td className="py-2 text-right font-mono">{totals.wins.toLocaleString()}</td>
+              <td className="py-2 text-right font-mono">{totals.podiums.toLocaleString()}</td>
+              <td className="py-2 text-right font-mono">{totals.poles.toLocaleString()}</td>
+              <td className="py-2 text-right font-mono">{totals.fastestLaps.toLocaleString()}</td>
+              <td className="py-2 text-right font-mono">{Math.round(totals.points).toLocaleString()}</td>
+            </tr>
           </tbody>
         </table>
       </div>

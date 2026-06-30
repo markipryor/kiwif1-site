@@ -22,7 +22,7 @@ const config = fs.existsSync(configFile) ? JSON.parse(fs.readFileSync(configFile
 
 // Section definitions: out dir, seed file, regex to identify a valid subdir name
 const SECTIONS = [
-  { dir: 'comparisons', seed: '.comparisons_seed', pattern: /^\d+-vs-\d+$/ },
+  { dir: 'comparisons', seed: '.comparisons_seed', pattern: /^\d+$/ },
   { dir: 'races',       seed: '.races_seed',       pattern: /^\d+$/ },
   { dir: 'constructors', seed: '.constructors_seed', pattern: /^\d+$/ },
   { dir: 'drivers',     seed: '.drivers_seed',     pattern: /^\d+$/ },

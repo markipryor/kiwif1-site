@@ -83,6 +83,8 @@ export interface SeasonStanding {
   points: number;
   wins: number;
   podiums: number;
+  poles: number;
+  fastestLaps: number;
 }
 
 export interface ConstructorStanding {
@@ -93,28 +95,3 @@ export interface ConstructorStanding {
   wins: number;
 }
 
-export interface TeammateComparison {
-  driverAId: number;
-  driverAName: string;
-  driverBId: number;
-  driverBName: string;
-  sharedSeasons: SharedSeason[];
-}
-
-export interface SharedSeason {
-  year: number;
-  constructor: string;
-  constructorId: number;
-  aRaces: number;
-  aWins: number;
-  aPodiums: number;
-  aPoints: number;
-  aQualiAhead: number;
-  aBestFinish: number | null;
-  bRaces: number;
-  bWins: number;
-  bPodiums: number;
-  bPoints: number;
-  bQualiAhead: number;
-  bBestFinish: number | null;
-}

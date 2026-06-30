@@ -57,11 +57,11 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
 
   const statBoxes = [
     { label: "Races", value: constructor.races, rank: ranks?.racesRank },
-    { label: "Wins", value: constructor.wins, rank: ranks?.winsRank },
-    { label: "Podiums", value: constructor.podiums, rank: ranks?.podiumsRank },
-    { label: "Points", value: Number(constructor.points).toFixed(0), rank: ranks?.pointsRank },
-    { label: "Poles", value: constructor.poles, rank: ranks?.polesRank },
-    { label: "Fastest Laps", value: constructor.fastestLaps, rank: ranks?.fastestLapsRank },
+    { label: "Wins", value: constructor.wins, rank: Number(constructor.wins) > 0 ? ranks?.winsRank : undefined },
+    { label: "Podiums", value: constructor.podiums, rank: Number(constructor.podiums) > 0 ? ranks?.podiumsRank : undefined },
+    { label: "Points", value: Number(constructor.points).toFixed(0), rank: Number(constructor.points) > 0 ? ranks?.pointsRank : undefined },
+    { label: "Poles", value: constructor.poles, rank: Number(constructor.poles) > 0 ? ranks?.polesRank : undefined },
+    { label: "Fastest Laps", value: constructor.fastestLaps, rank: Number(constructor.fastestLaps) > 0 ? ranks?.fastestLapsRank : undefined },
     { label: "Drivers", value: constructor.drivers, rank: undefined },
   ];
 
@@ -84,18 +84,18 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
             {s.rank != null && (
-              <p className="text-zinc-600 text-xs mt-1">#{s.rank} all-time</p>
+              <p className={`text-xs mt-1 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</p>
             )}
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm mb-10">
+      <div className="flex flex-col gap-1 text-sm mb-10">
         {constructor.firstRaceTitle && (
-          <span><span className="text-zinc-600">First race:</span> <span className="text-zinc-300">{constructor.firstRaceTitle} ({constructor.firstSeason})</span></span>
+          <span><span className="text-zinc-600">First race:</span> <span className="text-zinc-300">{constructor.firstRaceTitle}</span></span>
         )}
         {constructor.lastRaceTitle && (
-          <span><span className="text-zinc-600">{isCurrent ? "Latest race:" : "Last race:"}</span> <span className="text-zinc-300">{constructor.lastRaceTitle} ({constructor.lastSeason})</span></span>
+          <span><span className="text-zinc-600">{isCurrent ? "Latest race:" : "Last race:"}</span> <span className="text-zinc-300">{constructor.lastRaceTitle}</span></span>
         )}
       </div>
 

@@ -14,7 +14,7 @@ type SeasonRow = {
   fastestLaps: number;
   points: number;
   isComplete: number;
-  teammates: string | null;
+  teammateData: string | null;
 };
 
 type RaceRow = {
@@ -25,15 +25,19 @@ type RaceRow = {
   place: string;
   points: number;
   hasFastestLap: boolean;
+  constructorId: number;
+  constructorName: string;
 };
 
 type SeasonPosition = { year: number; champPos: number };
+
+type Teammate = { id: number; name: string };
 
 type MergedSeason = {
   year: number;
   isComplete: number;
   constructors: { name: string; id: number }[];
-  teammates: string;
+  teammates: Teammate[];
   races: number;
   wins: number;
   podiums: number;
@@ -44,6 +48,37 @@ type MergedSeason = {
 
 function fmt(n: number) {
   return n > 0 ? n : <span className="text-zinc-600">—</span>;
+}
+
+function parseTeammateData(data: string | null): Teammate[] {
+  if (!data) return [];
+  return data.split('|').filter(Boolean).map(t => {
+    const idx = t.indexOf('::');
+    if (idx === -1) return { id: 0, name: t };
+    return { id: Number(t.slice(0, idx)), name: t.slice(idx + 2) };
+  });
+}
+
+function RaceRowEl({ r }: { r: RaceRow }) {
+  return (
+    <tr key={r.grandprixId} className="border-b border-zinc-800/30 last:border-0 hover:bg-zinc-900/40">
+      <td className="px-4 py-1.5">
+        <Link href={`/races/${r.grandprixId}/`} className="text-zinc-300 hover:text-white transition-colors">
+          {r.raceTitle}
+        </Link>
+      </td>
+      <td className="px-4 py-1.5 text-right font-mono text-zinc-500">{r.grid || "—"}</td>
+      <td className="px-4 py-1.5 text-right font-mono">
+        <span className={r.place === "1" ? "text-yellow-400 font-bold" : "text-zinc-300"}>{r.place || "—"}</span>
+      </td>
+      <td className="px-4 py-1.5 text-center">
+        {r.hasFastestLap ? <span className="text-purple-400 text-xs font-mono" title="Fastest Lap">FL</span> : null}
+      </td>
+      <td className="px-4 py-1.5 text-right font-mono text-zinc-400">
+        {Number(r.points) > 0 ? Number(r.points).toFixed(0) : "—"}
+      </td>
+    </tr>
+  );
 }
 
 export default function DriverSeasonTable({
@@ -75,7 +110,7 @@ export default function DriverSeasonTable({
         year: s.year,
         isComplete: s.isComplete,
         constructors: [{ name: s.constructor, id: s.constructorId }],
-        teammates: s.teammates ?? "",
+        teammates: parseTeammateData(s.teammateData),
         races: Number(s.races),
         wins: Number(s.wins),
         podiums: Number(s.podiums),
@@ -86,9 +121,13 @@ export default function DriverSeasonTable({
     } else {
       const m = mergedMap.get(s.year)!;
       m.constructors.push({ name: s.constructor, id: s.constructorId });
-      const names = new Set(m.teammates.split(", ").filter(Boolean));
-      (s.teammates ?? "").split(", ").filter(Boolean).forEach((t) => names.add(t));
-      m.teammates = [...names].join(", ");
+      const existingIds = new Set(m.teammates.map(t => t.id));
+      for (const tm of parseTeammateData(s.teammateData)) {
+        if (!existingIds.has(tm.id)) {
+          m.teammates.push(tm);
+          existingIds.add(tm.id);
+        }
+      }
       m.races += Number(s.races);
       m.wins += Number(s.wins);
       m.podiums += Number(s.podiums);
@@ -130,6 +169,7 @@ export default function DriverSeasonTable({
             const isExpanded = expanded.has(s.year);
             const pos = posMap.get(s.year);
             const races = resultsByYear.get(s.year) ?? [];
+            const multiConstructor = s.constructors.length > 1;
 
             const rows: React.ReactNode[] = [
               <tr key={s.year} className="hover:bg-zinc-900/60 transition-colors">
@@ -175,7 +215,20 @@ export default function DriverSeasonTable({
                     </span>
                   )}
                 </td>
-                <td className="py-2.5 pl-4 text-zinc-500 text-sm">{s.teammates || "—"}</td>
+                <td className="py-2.5 pl-4 text-sm">
+                  {s.teammates.length > 0 ? (
+                    <span>
+                      {s.teammates.map((tm, i) => (
+                        <span key={tm.id}>
+                          {i > 0 && <span className="text-zinc-700">, </span>}
+                          <Link href={`/drivers/${tm.id}/`} className="text-zinc-500 hover:text-white transition-colors">
+                            {tm.name}
+                          </Link>
+                        </span>
+                      ))}
+                    </span>
+                  ) : <span className="text-zinc-700">—</span>}
+                </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
                 <td className="py-2.5 text-right font-mono">
                   <span className={s.wins > 0 ? "text-white font-semibold" : "text-zinc-500"}>{s.wins}</span>
@@ -188,6 +241,39 @@ export default function DriverSeasonTable({
             ];
 
             if (isExpanded) {
+              // Group races by constructor when driver switched teams mid-season
+              let raceBody: React.ReactNode;
+              if (multiConstructor && races.length > 0) {
+                const groups = new Map<number, { name: string; races: RaceRow[] }>();
+                const order: number[] = [];
+                for (const r of races) {
+                  if (!groups.has(r.constructorId)) {
+                    order.push(r.constructorId);
+                    groups.set(r.constructorId, { name: r.constructorName, races: [] });
+                  }
+                  groups.get(r.constructorId)!.races.push(r);
+                }
+                raceBody = order.map((cid) => {
+                  const { name, races: cRaces } = groups.get(cid)!;
+                  return (
+                    <>
+                      <tr key={`${cid}-hdr`} className="bg-zinc-900/50">
+                        <td colSpan={5} className="px-4 py-1 text-zinc-500 text-xs font-medium">{name}</td>
+                      </tr>
+                      {cRaces.map((r) => <RaceRowEl key={r.grandprixId} r={r} />)}
+                    </>
+                  );
+                });
+              } else {
+                raceBody = races.length > 0
+                  ? races.map((r) => <RaceRowEl key={r.grandprixId} r={r} />)
+                  : (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-3 text-zinc-600 text-center">No race detail available</td>
+                    </tr>
+                  );
+              }
+
               rows.push(
                 <tr key={`${s.year}-races`}>
                   <td colSpan={10} className="pb-3 pt-0">
@@ -203,29 +289,7 @@ export default function DriverSeasonTable({
                           </tr>
                         </thead>
                         <tbody>
-                          {races.length > 0 ? races.map((r) => (
-                            <tr key={r.grandprixId} className="border-b border-zinc-800/30 last:border-0 hover:bg-zinc-900/40">
-                              <td className="px-4 py-1.5">
-                                <Link href={`/races/${r.grandprixId}/`} className="text-zinc-300 hover:text-white transition-colors">
-                                  {r.raceTitle}
-                                </Link>
-                              </td>
-                              <td className="px-4 py-1.5 text-right font-mono text-zinc-500">{r.grid || "—"}</td>
-                              <td className="px-4 py-1.5 text-right font-mono">
-                                <span className={r.place === "1" ? "text-yellow-400 font-bold" : "text-zinc-300"}>{r.place || "—"}</span>
-                              </td>
-                              <td className="px-4 py-1.5 text-center">
-                                {r.hasFastestLap ? <span className="text-purple-400 text-xs font-mono" title="Fastest Lap">FL</span> : null}
-                              </td>
-                              <td className="px-4 py-1.5 text-right font-mono text-zinc-400">
-                                {Number(r.points) > 0 ? Number(r.points).toFixed(0) : "—"}
-                              </td>
-                            </tr>
-                          )) : (
-                            <tr>
-                              <td colSpan={5} className="px-4 py-3 text-zinc-600 text-center">No race detail available</td>
-                            </tr>
-                          )}
+                          {raceBody}
                         </tbody>
                       </table>
                     </div>

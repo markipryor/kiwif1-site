@@ -7,7 +7,7 @@ export default async function SeasonsPage() {
   const seasons = await getAllSeasons();
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
+    <div className="max-w-4xl mx-auto px-6 py-12">
       <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mb-2">Formula 1</p>
       <h1 className="text-3xl font-bold text-white mb-8">All Seasons</h1>
 
@@ -19,6 +19,8 @@ export default async function SeasonsPage() {
               <th className="pb-3 text-right">Races</th>
               <th className="pb-3 text-right">Drivers</th>
               <th className="pb-3 text-left pl-6">Champion</th>
+              <th className="pb-3 text-left pl-4">Runner-Up</th>
+              <th className="pb-3 text-left pl-4">WCC</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/60">
@@ -40,6 +42,12 @@ export default async function SeasonsPage() {
                       <span className="text-xs bg-blue-900/40 text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded-full leading-none">Leader</span>
                     </span>
                   )}
+                </td>
+                <td className="py-2.5 pl-4 text-zinc-500 text-sm">
+                  {s.isComplete ? (s.runnerUp ?? "—") : null}
+                </td>
+                <td className="py-2.5 pl-4 text-zinc-500 text-sm">
+                  {s.isComplete && s.year >= 1958 ? (s.constructorChampion ?? "—") : null}
                 </td>
               </tr>
             ))}

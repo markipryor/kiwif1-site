@@ -1,7 +1,7 @@
 import { query } from "./db";
 import type {
   Driver, DriverStats, Constructor, ConstructorStats,
-  Race, RaceResult, SeasonStanding, ConstructorStanding, SharedSeason,
+  Race, RaceResult, SeasonStanding, ConstructorStanding,
 } from "./types";
 
 // ─── Points helpers ────────────────────────────────────────────────────────────
@@ -266,29 +266,32 @@ export async function getDriverRanks(driverId: number): Promise<DriverRanks> {
 }
 
 export async function getDriverRaceResults(driverId: number): Promise<{
-  year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean;
+  year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean; constructorId: number; constructorName: string;
 }[]> {
   const rp = racePts();
   const fl = flBonus();
   const sp = sprintPts();
-  return query<{ year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean }>(`
+  return query<{ year: number; grandprixId: number; raceTitle: string; grid: string; place: string; points: number; hasFastestLap: boolean; constructorId: number; constructorName: string }>(`
     SELECT
       YEAR(gp.date) AS year,
       gp.id AS grandprixId,
       CASE
-        WHEN gp.fullTitle IS NOT NULL AND gp.fullTitle != '' THEN gp.fullTitle
-        WHEN gp.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp.date), ' Indianapolis 500')
-        WHEN n.adjective = 'American' THEN CONCAT(YEAR(gp.date), ' United States Grand Prix')
-        WHEN n.adjective IS NOT NULL THEN CONCAT(YEAR(gp.date), ' ', n.adjective, ' Grand Prix')
-        WHEN gp.shortTitle IS NOT NULL AND gp.shortTitle != '' THEN CONCAT(YEAR(gp.date), ' ', gp.shortTitle, ' Grand Prix')
-        ELSE CONCAT(YEAR(gp.date), ' Grand Prix')
+        WHEN gp.shortTitle = 'Indianapolis 500' THEN 'Indianapolis 500'
+        WHEN n.adjective = 'American' THEN 'United States Grand Prix'
+        WHEN n.adjective IS NOT NULL THEN CONCAT(n.adjective, ' Grand Prix')
+        WHEN gp.shortTitle IS NOT NULL AND gp.shortTitle != '' THEN CONCAT(gp.shortTitle, ' Grand Prix')
+        ELSE 'Grand Prix'
       END AS raceTitle,
       r.grid,
       r.place,
       ((${rp}) + (${fl}) + (${sp})) AS points,
-      CASE WHEN fl.driver_id IS NOT NULL THEN 1 ELSE 0 END AS hasFastestLap
+      CASE WHEN fl.driver_id IS NOT NULL THEN 1 ELSE 0 END AS hasFastestLap,
+      e.constructor_id AS constructorId,
+      COALESCE(NULLIF(c.name, ''), c.shortName) AS constructorName
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
+    JOIN entrants e ON r.entrant_id = e.id
+    JOIN constructors c ON e.constructor_id = c.id
     LEFT JOIN circuitlayouts cl ON gp.circuitlayout_id = cl.id AND gp.circuitlayout_id != 0
     LEFT JOIN circuits ci ON cl.circuit_id = ci.id
     LEFT JOIN nationalities n ON ci.nationality_id = n.id
@@ -343,8 +346,8 @@ export async function getDriverById(id: number): Promise<(Driver & DriverStats) 
       COUNT(DISTINCT YEAR(gp.date)) AS seasons,
       MIN(YEAR(gp.date)) AS firstRace,
       MAX(YEAR(gp.date)) AS lastRace,
-      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
-      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle
+      (SELECT CASE WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') WHEN n2.adjective IS NOT NULL THEN CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') WHEN gp2.shortTitle IS NOT NULL AND gp2.shortTitle != '' THEN CONCAT(YEAR(gp2.date), ' ', gp2.shortTitle, ' Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id LEFT JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id AND gp2.circuitlayout_id != 0 LEFT JOIN circuits ci2 ON cl2.circuit_id = ci2.id LEFT JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT CASE WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') WHEN n2.adjective IS NOT NULL THEN CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') WHEN gp2.shortTitle IS NOT NULL AND gp2.shortTitle != '' THEN CONCAT(YEAR(gp2.date), ' ', gp2.shortTitle, ' Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id LEFT JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id AND gp2.circuitlayout_id != 0 LEFT JOIN circuits ci2 ON cl2.circuit_id = ci2.id LEFT JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE r2.driver_id = d.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle
     FROM drivers d
     JOIN nationalities n ON d.nationality_id = n.id
     JOIN results r ON r.driver_id = d.id
@@ -362,9 +365,9 @@ export async function getDriverSeasons(driverId: number) {
   return query<{
     year: number; constructor: string; constructorId: number;
     races: number; wins: number; podiums: number; poles: number; fastestLaps: number; points: number;
-    isComplete: number; teammates: string | null;
+    isComplete: number; teammateData: string | null;
   }>(`
-    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.poles, s.fastestLaps, s.points, s.isComplete, tm.teammates
+    SELECT s.year, s.constructor, s.constructorId, s.races, s.wins, s.podiums, s.poles, s.fastestLaps, s.points, s.isComplete, tm.teammateData
     FROM (
       SELECT
         YEAR(gp.date) AS year,
@@ -388,7 +391,7 @@ export async function getDriverSeasons(driverId: number) {
     ) s
     LEFT JOIN (
       SELECT YEAR(gp2.date) AS year, e1t.constructor_id,
-        GROUP_CONCAT(DISTINCT CONCAT(d2.firstName, ' ', d2.surname) ORDER BY d2.surname SEPARATOR ', ') AS teammates
+        GROUP_CONCAT(DISTINCT CONCAT(d2.id, '::', d2.firstName, ' ', d2.surname) ORDER BY d2.surname SEPARATOR '|') AS teammateData
       FROM results r1t
       JOIN grandsprix gp2 ON r1t.grandprix_id = gp2.id
       JOIN entrants e1t ON r1t.entrant_id = e1t.id
@@ -485,8 +488,8 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
       SUM(${totalPts()}) AS points,
       MIN(YEAR(gp.date)) AS firstSeason,
       MAX(YEAR(gp.date)) AS lastSeason,
-      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
-      (SELECT CASE WHEN gp2.fullTitle != '' THEN gp2.fullTitle WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id JOIN circuits ci2 ON cl2.circuit_id = ci2.id JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle,
+      (SELECT CASE WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') WHEN n2.adjective IS NOT NULL THEN CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') WHEN gp2.shortTitle IS NOT NULL AND gp2.shortTitle != '' THEN CONCAT(YEAR(gp2.date), ' ', gp2.shortTitle, ' Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id LEFT JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id AND gp2.circuitlayout_id != 0 LEFT JOIN circuits ci2 ON cl2.circuit_id = ci2.id LEFT JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date ASC LIMIT 1) AS firstRaceTitle,
+      (SELECT CASE WHEN gp2.shortTitle = 'Indianapolis 500' THEN CONCAT(YEAR(gp2.date), ' Indianapolis 500') WHEN n2.adjective = 'American' THEN CONCAT(YEAR(gp2.date), ' United States Grand Prix') WHEN n2.adjective IS NOT NULL THEN CONCAT(YEAR(gp2.date), ' ', n2.adjective, ' Grand Prix') WHEN gp2.shortTitle IS NOT NULL AND gp2.shortTitle != '' THEN CONCAT(YEAR(gp2.date), ' ', gp2.shortTitle, ' Grand Prix') ELSE CONCAT(YEAR(gp2.date), ' Grand Prix') END FROM grandsprix gp2 JOIN results r2 ON r2.grandprix_id = gp2.id JOIN entrants e2 ON r2.entrant_id = e2.id LEFT JOIN circuitlayouts cl2 ON gp2.circuitlayout_id = cl2.id AND gp2.circuitlayout_id != 0 LEFT JOIN circuits ci2 ON cl2.circuit_id = ci2.id LEFT JOIN nationalities n2 ON ci2.nationality_id = n2.id WHERE e2.constructor_id = c.id ORDER BY gp2.date DESC LIMIT 1) AS lastRaceTitle,
       COUNT(DISTINCT r.driver_id) AS drivers
     FROM constructors c
     LEFT JOIN nationalities n ON c.nationality_id = n.id
@@ -701,32 +704,64 @@ export async function getRaceSprintResults(raceId: number) {
 
 // ─── Seasons ───────────────────────────────────────────────────────────────────
 
-export async function getAllSeasons(): Promise<{ year: number; races: number; drivers: number; isComplete: boolean; winner: string | null }[]> {
-  const [seasons, winners] = await Promise.all([
+export async function getAllSeasons(): Promise<{ year: number; races: number; drivers: number; isComplete: boolean; winner: string | null; runnerUp: string | null; constructorChampion: string | null }[]> {
+  // Race-only points for all season queries (sprint/FL never changed a championship result;
+  // omitting those joins keeps this from 10s → 0.1s)
+  const rp = racePts();
+  const [seasons, driverResults, constructorResults] = await Promise.all([
     query<{ year: number; races: number; drivers: number; isComplete: number }>(`
       SELECT YEAR(gp.date) AS year, COUNT(DISTINCT gp.id) AS races, COUNT(DISTINCT r.driver_id) AS drivers,
         YEAR(MAX(gp.date)) < YEAR(CURDATE()) AS isComplete
       FROM grandsprix gp JOIN results r ON r.grandprix_id = gp.id
       GROUP BY YEAR(gp.date) ORDER BY year DESC
     `),
-    // Race-only points for leader/champion (sprint/FL never changed a championship result;
-    // omitting those joins keeps this from 10s → 0.1s)
-    query<{ year: number; winner: string }>(`
+    query<{ year: number; winner: string | null; runnerUp: string | null }>(`
       WITH season_pts AS (
-        SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
+        SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${rp}) AS pts
         FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
         GROUP BY YEAR(gp.date), r.driver_id
+      ),
+      ranked AS (
+        SELECT year, driver_id, RANK() OVER (PARTITION BY year ORDER BY pts DESC) AS rnk
+        FROM season_pts
       )
-      SELECT sp.year, CONCAT(d.firstName, ' ', d.surname) AS winner
-      FROM season_pts sp
-      JOIN drivers d ON d.id = sp.driver_id
-      WHERE sp.pts = (SELECT MAX(pts) FROM season_pts sp2 WHERE sp2.year = sp.year)
-      GROUP BY sp.year
-      ORDER BY sp.year DESC
+      SELECT ranked.year,
+        MAX(CASE WHEN rnk = 1 THEN CONCAT(d.firstName, ' ', d.surname) END) AS winner,
+        MAX(CASE WHEN rnk = 2 THEN CONCAT(d.firstName, ' ', d.surname) END) AS runnerUp
+      FROM ranked
+      JOIN drivers d ON d.id = ranked.driver_id
+      WHERE rnk <= 2
+      GROUP BY ranked.year
+      ORDER BY ranked.year DESC
+    `),
+    query<{ year: number; constructorChampion: string }>(`
+      WITH season_totals AS (
+        SELECT YEAR(gp.date) AS year, e.constructor_id, SUM(${rp}) AS pts
+        FROM results r
+        JOIN grandsprix gp ON r.grandprix_id = gp.id
+        JOIN entrants e ON r.entrant_id = e.id
+        WHERE YEAR(gp.date) >= 1958
+          AND YEAR(gp.date) IN (
+            SELECT YEAR(gp2.date) FROM grandsprix gp2 GROUP BY YEAR(gp2.date) HAVING MAX(gp2.date) < CURDATE()
+          )
+        GROUP BY YEAR(gp.date), e.constructor_id
+      )
+      SELECT st.year, COALESCE(NULLIF(c.name, ''), c.shortName) AS constructorChampion
+      FROM season_totals st
+      JOIN constructors c ON c.id = st.constructor_id
+      WHERE st.pts = (SELECT MAX(pts) FROM season_totals st2 WHERE st2.year = st.year)
+      ORDER BY st.year DESC
     `),
   ]);
-  const winnerMap = new Map(winners.map((w) => [w.year, w.winner]));
-  return seasons.map((s) => ({ ...s, isComplete: !!s.isComplete, winner: winnerMap.get(s.year) ?? null }));
+  const driverMap = new Map(driverResults.map((w) => [w.year, w]));
+  const constructorMap = new Map(constructorResults.map((c) => [c.year, c.constructorChampion]));
+  return seasons.map((s) => ({
+    ...s,
+    isComplete: !!s.isComplete,
+    winner: driverMap.get(s.year)?.winner ?? null,
+    runnerUp: driverMap.get(s.year)?.runnerUp ?? null,
+    constructorChampion: constructorMap.get(s.year) ?? null,
+  }));
 }
 
 export async function getSeasonRaces(year: number): Promise<Race[]> {
@@ -771,7 +806,9 @@ export async function getSeasonDriverStandings(year: number): Promise<SeasonStan
       c.id AS constructorId,
       SUM(${totalPts()}) AS points,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
-      SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums
+      SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+      COUNT(fl.grandprix_id) AS fastestLaps
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     JOIN drivers d ON r.driver_id = d.id
@@ -860,74 +897,48 @@ export async function getRecords() {
 
 // ─── Teammate comparisons ──────────────────────────────────────────────────────
 
-export async function getAllTeammatePairs(): Promise<{ driverAId: number; driverBId: number }[]> {
+export async function getDriverComparisons(driverId: number): Promise<{
+  teammateId: number;
+  teammateName: string;
+  year: number;
+  constructorId: number;
+  constructorName: string;
+  sharedRaces: number;
+  qualiRaces: number;
+  aQualiAhead: number;
+  finishRaces: number;
+  aFinishAhead: number;
+  aPoints: number;
+  bPoints: number;
+}[]> {
+  const pts1 = totalPts("r1", "gp", "fl1", "sp1");
+  const pts2 = totalPts("r2", "gp", "fl2", "sp2");
   return query(`
-    SELECT DISTINCT
-      LEAST(r1.driver_id, r2.driver_id) AS driverAId,
-      GREATEST(r1.driver_id, r2.driver_id) AS driverBId
-    FROM results r1
-    JOIN results r2
-      ON r2.entrant_id = r1.entrant_id
-      AND r2.grandprix_id = r1.grandprix_id
-      AND r2.driver_id > r1.driver_id
-    ORDER BY driverAId, driverBId
-  `);
-}
-
-export async function getCurrentTeammatePairs(): Promise<{ driverAId: number; driverBId: number }[]> {
-  return query(`
-    SELECT DISTINCT
-      LEAST(r1.driver_id, r2.driver_id) AS driverAId,
-      GREATEST(r1.driver_id, r2.driver_id) AS driverBId
-    FROM results r1
-    JOIN results r2
-      ON r2.entrant_id = r1.entrant_id
-      AND r2.grandprix_id = r1.grandprix_id
-      AND r2.driver_id > r1.driver_id
-    JOIN drivers d1 ON d1.id = r1.driver_id AND d1.current = 1
-    JOIN drivers d2 ON d2.id = r2.driver_id AND d2.current = 1
-    ORDER BY driverAId, driverBId
-  `);
-}
-
-export async function getTeammateComparison(driverAId: number, driverBId: number): Promise<SharedSeason[]> {
-  // r1 is whichever driver (A or B) is in the outer loop; r2 is the teammate
-  const rp = racePts("r1", "gp");
-  const fl = flBonus("r1", "gp", "fl");
-  const sp = sprintPts("s", "gp");
-  return query<SharedSeason>(`
     SELECT
+      d2.id AS teammateId,
+      CONCAT(d2.firstName, ' ', d2.surname) AS teammateName,
       YEAR(gp.date) AS year,
-      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
+      COALESCE(NULLIF(c.name, ''), c.shortName) AS constructorName,
       c.id AS constructorId,
-      SUM(CASE WHEN r1.driver_id = ? THEN 1 ELSE 0 END) AS aRaces,
-      SUM(CASE WHEN r1.driver_id = ? AND r1.place = '1' THEN 1 ELSE 0 END) AS aWins,
-      SUM(CASE WHEN r1.driver_id = ? AND r1.place IN ('1','2','3') THEN 1 ELSE 0 END) AS aPodiums,
-      SUM(CASE WHEN r1.driver_id = ? THEN (${rp}) + (${fl}) + (${sp}) ELSE 0 END) AS aPoints,
-      SUM(CASE WHEN r1.driver_id = ? THEN 1 ELSE 0 END) AS bRaces,
-      SUM(CASE WHEN r1.driver_id = ? AND r1.place = '1' THEN 1 ELSE 0 END) AS bWins,
-      SUM(CASE WHEN r1.driver_id = ? AND r1.place IN ('1','2','3') THEN 1 ELSE 0 END) AS bPodiums,
-      SUM(CASE WHEN r1.driver_id = ? THEN (${rp}) + (${fl}) + (${sp}) ELSE 0 END) AS bPoints,
-      SUM(CASE WHEN r1.driver_id = ? AND CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 AND CAST(r1.grid AS UNSIGNED) < CAST(r2.grid AS UNSIGNED) THEN 1 ELSE 0 END) AS aQualiAhead,
-      SUM(CASE WHEN r1.driver_id = ? AND CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 AND CAST(r1.grid AS UNSIGNED) < CAST(r2.grid AS UNSIGNED) THEN 1 ELSE 0 END) AS bQualiAhead
+      COUNT(*) AS sharedRaces,
+      SUM(CASE WHEN CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 THEN 1 ELSE 0 END) AS qualiRaces,
+      SUM(CASE WHEN CAST(r1.grid AS UNSIGNED) > 0 AND CAST(r2.grid AS UNSIGNED) > 0 AND CAST(r1.grid AS UNSIGNED) < CAST(r2.grid AS UNSIGNED) THEN 1 ELSE 0 END) AS aQualiAhead,
+      SUM(CASE WHEN CAST(r1.place AS UNSIGNED) > 0 AND CAST(r2.place AS UNSIGNED) > 0 THEN 1 ELSE 0 END) AS finishRaces,
+      SUM(CASE WHEN CAST(r1.place AS UNSIGNED) > 0 AND CAST(r2.place AS UNSIGNED) > 0 AND CAST(r1.place AS UNSIGNED) < CAST(r2.place AS UNSIGNED) THEN 1 ELSE 0 END) AS aFinishAhead,
+      SUM(${pts1}) AS aPoints,
+      SUM(${pts2}) AS bPoints
     FROM results r1
-    JOIN results r2
-      ON r2.entrant_id = r1.entrant_id
-      AND r2.grandprix_id = r1.grandprix_id
-      AND r2.driver_id != r1.driver_id
+    JOIN results r2 ON r2.entrant_id = r1.entrant_id AND r2.grandprix_id = r1.grandprix_id AND r2.driver_id != r1.driver_id
     JOIN grandsprix gp ON r1.grandprix_id = gp.id
     JOIN entrants e ON r1.entrant_id = e.id
     JOIN constructors c ON e.constructor_id = c.id
-    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r1.driver_id
-    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r1.driver_id
-    WHERE r1.driver_id IN (?, ?)
-      AND r2.driver_id IN (?, ?)
-    GROUP BY YEAR(gp.date), c.id
-    ORDER BY year
-  `, [
-    driverAId, driverAId, driverAId, driverAId,
-    driverBId, driverBId, driverBId, driverBId,
-    driverAId, driverBId,
-    driverAId, driverBId, driverAId, driverBId,
-  ]);
+    JOIN drivers d2 ON d2.id = r2.driver_id
+    LEFT JOIN fastestlaps fl1 ON fl1.grandprix_id = gp.id AND fl1.driver_id = r1.driver_id
+    LEFT JOIN sprints sp1 ON sp1.grandprix_id = gp.id AND sp1.driver_id = r1.driver_id
+    LEFT JOIN fastestlaps fl2 ON fl2.grandprix_id = gp.id AND fl2.driver_id = r2.driver_id
+    LEFT JOIN sprints sp2 ON sp2.grandprix_id = gp.id AND sp2.driver_id = r2.driver_id
+    WHERE r1.driver_id = ?
+    GROUP BY d2.id, YEAR(gp.date), c.id
+    ORDER BY YEAR(gp.date) DESC, d2.surname ASC
+  `, [driverId]);
 }
