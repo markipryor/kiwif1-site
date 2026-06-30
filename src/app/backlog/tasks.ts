@@ -178,6 +178,16 @@ export const sections: Section[] = [
 
 export const deployed: { version: string; changes: string[] }[] = [
   {
+    version: "v6.3.0",
+    changes: [
+      "Records: Tabbed layout with Most, Youngest, Oldest, Consecutive, and Other tabs",
+      "Records: All existing records moved under Most tab as collapsible accordion sections",
+      "Records: Each section shows top 10 on expand with current leader visible in header when collapsed",
+      "Records: Full list pages added at /records/[category]/ for all six Most categories",
+      "Records: Points full list page retains sortable columns (historical and 2026 system)",
+    ],
+  },
+  {
     version: "v6.2.1",
     changes: [
       "Comparisons: Changed qualifying/race finish format from '4 — 6' to '4 - 2' (both driver counts shown, no percentage)",
