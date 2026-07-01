@@ -116,9 +116,9 @@ export const sections: Section[] = [
   {
     label: "Records",
     tasks: [
-      { id: "KF1-R-01", title: "Full list pages per record", complexity: "S", status: "done", version: "v6.3.0", description: "Add a 'More' link on each record card to a dedicated page listing all drivers with more than 0 for that stat." },
+      { id: "KF1-R-01", title: "Full list pages per record", complexity: "S", status: "deployed", version: "v6.3.0", description: "Add a 'More' link on each record card to a dedicated page listing all drivers with more than 0 for that stat." },
       { id: "KF1-R-02", title: "Additional records",         complexity: "M", status: "pending", description: "Add new record categories: most grand slams (win + pole + fastest lap + led every lap), most race starts without a win, and others." },
-      { id: "KF1-R-03", title: "Reformat records page into categories", complexity: "M", status: "done", version: "v6.3.0", description: "Restructure the records page into distinct sections: Most (wins, podiums, poles, fastest laps, points, races), Firsts (first win, first pole, etc.), Oldest/Youngest (oldest winner, youngest champion, etc.). Each section gets its own heading and layout." },
+      { id: "KF1-R-03", title: "Reformat records page into categories", complexity: "M", status: "deployed", version: "v6.3.1", description: "Restructure the records page into distinct sections: Most (wins, podiums, poles, fastest laps, points, races), Firsts (first win, first pole, etc.), Oldest/Youngest (oldest winner, youngest champion, etc.). Each section gets its own heading and layout." },
     ],
   },
   {
@@ -177,6 +177,15 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.3.1",
+    changes: [
+      "Records: Youngest tab — top 10 for winner, podium, pole, fastest lap, points scorer, and race starter (age at first achievement)",
+      "Records: Oldest tab — top 10 for same six categories (age at last achievement)",
+      "Records: Age displayed as years + days (e.g. 18y 232d) with date of the achievement",
+      "Records: If no current grid driver appears in the top 10, nearest current driver shown below a divider at their actual rank",
+    ],
+  },
   {
     version: "v6.3.0",
     changes: [
@@ -348,7 +357,7 @@ export const deployedTasks = sections.flatMap((s) =>
 
 export const done: { id: string; title: string; version: string }[] = [
   { id: "KF1-R-01", title: "Full list pages per record", version: "v6.3.0" },
-  { id: "KF1-R-03", title: "Reformat records page into categories", version: "v6.3.0" },
+  { id: "KF1-R-03", title: "Reformat records page into categories", version: "v6.3.1" },
   { id: "KF1-2026-R07", title: "Enter results: R7 Spanish GP (14 Jun)", version: "14 Jun 2026" },
   { id: "KF1-COMP-ENH-05", title: "Versus all teammates page", version: "v6.1.0" },
   { id: "KF1-COMP-ENH-04", title: "Race count next to year on comparison page", version: "v6.1.0" },
