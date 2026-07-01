@@ -845,6 +845,107 @@ export async function getSeasonConstructorStandings(year: number): Promise<Const
 
 // ─── Records ──────────────────────────────────────────────────────────────────
 
+export type AgeRow = { driverId: number; name: string; ageDays: number; achievedDate: string; current: boolean };
+export type AgeRecordSet = { top10: AgeRow[]; currentEntry: { rank: number; row: AgeRow } | null };
+
+function processAgeRows(rows: (Omit<AgeRow, 'current'> & { current: number })[]): AgeRecordSet {
+  const mapped = rows.map(r => ({ ...r, current: r.current === 1 }));
+  const top10 = mapped.slice(0, 10);
+  if (top10.some(r => r.current)) return { top10, currentEntry: null };
+  const idx = mapped.findIndex((r, i) => i >= 10 && r.current);
+  return { top10, currentEntry: idx === -1 ? null : { rank: idx + 1, row: mapped[idx] } };
+}
+
+const DOB_FILTER = `d.dateOfBirth IS NOT NULL AND d.dateOfBirth NOT IN ('0000-00-00','1970-01-01')`;
+
+const POINTS_FILTER = `(
+  (r.fullPointsDriver = 0 AND r.actualPointsDriver > 0)
+  OR (r.fullPointsDriver = 1 AND r.position BETWEEN 1 AND
+    CASE WHEN YEAR(gp.date) >= 2010 THEN 10
+         WHEN YEAR(gp.date) >= 2003 THEN 8
+         WHEN YEAR(gp.date) >= 1961 THEN 6
+         ELSE 5 END)
+)`;
+
+function winsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
+    WHERE r.place='1' AND ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+function podiumsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
+    WHERE r.place IN ('1','2','3') AND ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+function polesAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM poletimes pt JOIN grandsprix gp ON pt.grandprix_id=gp.id
+    JOIN results r ON r.grandprix_id=gp.id AND r.grid='1'
+    JOIN drivers d ON r.driver_id=d.id
+    WHERE ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+function flAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM fastestlaps fl JOIN grandsprix gp ON fl.grandprix_id=gp.id JOIN drivers d ON fl.driver_id=d.id
+    WHERE ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+function ptsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
+    WHERE ${POINTS_FILTER} AND ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+function startsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
+  return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
+    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
+    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
+    WHERE ${DOB_FILTER}
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+}
+
+export async function getAgeRecords() {
+  type R = Omit<AgeRow, 'current'> & { current: number };
+  const [yw, ow, yp, op, ypo, opo, yfl, ofl, ypts, opts, yst, ost] = await Promise.all([
+    query<R>(winsAgeQ('MIN','ASC')),
+    query<R>(winsAgeQ('MAX','DESC')),
+    query<R>(podiumsAgeQ('MIN','ASC')),
+    query<R>(podiumsAgeQ('MAX','DESC')),
+    query<R>(polesAgeQ('MIN','ASC')),
+    query<R>(polesAgeQ('MAX','DESC')),
+    query<R>(flAgeQ('MIN','ASC')),
+    query<R>(flAgeQ('MAX','DESC')),
+    query<R>(ptsAgeQ('MIN','ASC')),
+    query<R>(ptsAgeQ('MAX','DESC')),
+    query<R>(startsAgeQ('MIN','ASC')),
+    query<R>(startsAgeQ('MAX','DESC')),
+  ]);
+  return {
+    youngest: {
+      wins: processAgeRows(yw), podiums: processAgeRows(yp), poles: processAgeRows(ypo),
+      fastestLaps: processAgeRows(yfl), points: processAgeRows(ypts), races: processAgeRows(yst),
+    },
+    oldest: {
+      wins: processAgeRows(ow), podiums: processAgeRows(op), poles: processAgeRows(opo),
+      fastestLaps: processAgeRows(ofl), points: processAgeRows(opts), races: processAgeRows(ost),
+    },
+  };
+}
+
 export async function getRecords() {
   const [wins, podiums, poles, fastestLaps, points, races] = await Promise.all([
     query<{ driverId: number; name: string; value: number }>(`
