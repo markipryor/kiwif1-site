@@ -147,7 +147,7 @@ export const sections: Section[] = [
     label: "2026 Race Data",
     tasks: [
       { id: "KF1-2026-R07", title: "Enter results: R7 Spanish GP (14 Jun)",        complexity: "S", status: "done",    version: "14 Jun 2026", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Spanish Grand Prix (grandprix id 1156, 14 June 2026)." },
-      { id: "KF1-2026-R08", title: "Enter results: R8 Austrian GP (28 Jun)",        complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Austrian Grand Prix (grandprix id 1157, 28 June 2026)." },
+      { id: "KF1-2026-R08", title: "Enter results: R8 Austrian GP (28 Jun)",        complexity: "S", status: "done", version: "1 Jul 2026", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Austrian Grand Prix (grandprix id 1157, 28 June 2026)." },
       { id: "KF1-2026-R09", title: "Enter results: R9 British GP (5 Jul)",           complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 British Grand Prix (grandprix id 1158, 5 July 2026)." },
       { id: "KF1-2026-R10", title: "Enter results: R10 Belgian GP (19 Jul)",         complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Belgian Grand Prix (grandprix id 1159, 19 July 2026)." },
       { id: "KF1-2026-R11", title: "Enter results: R11 Hungarian GP (26 Jul)",       complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Hungarian Grand Prix (grandprix id 1160, 26 July 2026)." },
@@ -356,6 +356,7 @@ export const deployedTasks = sections.flatMap((s) =>
 );
 
 export const done: { id: string; title: string; version: string }[] = [
+  { id: "KF1-2026-R08", title: "Enter results: R8 Austrian GP (28 Jun)", version: "1 Jul 2026" },
   { id: "KF1-DI-05", title: "List races with missing fastest laps", version: "1 Jul 2026" },
   { id: "KF1-DI-06", title: "Find drivers with missing nationality code", version: "1 Jul 2026" },
   { id: "KF1-DI-10", title: "Find races with no recorded winner", version: "1 Jul 2026" },
