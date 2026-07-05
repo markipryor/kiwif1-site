@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span>© {new Date().getFullYear()} Mark Pryor</span>
               <a href="mailto:markpryor@gmail.com" className="hover:text-white transition-colors">markpryor@gmail.com</a>
             </div>
-            <span className="text-zinc-600 text-xs font-mono">v6.2.1</span>
+            <span className="text-zinc-600 text-xs font-mono">v6.4.0</span>
           </div>
         </footer>
       </body>

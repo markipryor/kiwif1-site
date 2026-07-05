@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllConstructors, getConstructorById, getConstructorSeasons, getConstructorChain, getConstructorSeasonDrivers, getConstructorRanks } from "@/lib/queries";
+import { getAllConstructors, getConstructorById, getConstructorSeasons, getConstructorChain, getConstructorSeasonDrivers, getConstructorRanks, getConstructorSeasonChampInfo, getConstructorDriverWdcPositions } from "@/lib/queries";
 import { getBuildConfig, getSeed } from "@/lib/build-config";
 import ConstructorSeasonTable from "./ConstructorSeasonTable";
 
@@ -33,13 +33,20 @@ function yearLabel(start: number, end: number | "present") {
 
 export default async function ConstructorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [constructor, seasons, seasonDrivers, chain, ranks] = await Promise.all([
+  const [constructor, seasons, seasonDrivers, chain, ranks, champInfo, driverWdcRows] = await Promise.all([
     getConstructorById(Number(id)),
     getConstructorSeasons(Number(id)),
     getConstructorSeasonDrivers(Number(id)),
     getConstructorChain(Number(id)),
     getConstructorRanks(Number(id)),
+    getConstructorSeasonChampInfo(Number(id)),
+    getConstructorDriverWdcPositions(Number(id)),
   ]);
+
+  const driverWdcPos: Record<string, number> = {};
+  for (const row of driverWdcRows) {
+    driverWdcPos[`${row.year}-${row.driverId}`] = row.wdcPos;
+  }
 
   if (!constructor) notFound();
 
@@ -90,6 +97,7 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
         ))}
       </div>
 
+
       <div className="flex flex-col gap-1 text-sm mb-10">
         {constructor.firstRaceTitle && (
           <span><span className="text-zinc-600">First race:</span> <span className="text-zinc-300">{constructor.firstRaceTitle}</span></span>
@@ -131,7 +139,7 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
       )}
 
       <h2 className="text-lg font-bold text-white mb-4">Season by Season</h2>
-      <ConstructorSeasonTable seasons={seasons} driverRows={seasonDrivers} />
+      <ConstructorSeasonTable seasons={seasons} driverRows={seasonDrivers} champInfo={champInfo} driverWdcPos={driverWdcPos} />
     </div>
   );
 }

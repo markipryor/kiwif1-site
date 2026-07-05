@@ -19,7 +19,12 @@ export function getBuildConfig(): BuildConfig | null {
   if (_loaded) return _config;
   _loaded = true;
   const f = path.join(/* turbopackIgnore: true */ process.cwd(), ".build-config.json");
-  if (fs.existsSync(f)) _config = JSON.parse(fs.readFileSync(f, "utf8"));
+  if (fs.existsSync(f)) {
+    const raw: BuildConfig = JSON.parse(fs.readFileSync(f, "utf8"));
+    // In backlog mode, clear all section specs so generateStaticParams falls through
+    // to seed files — generates exactly 1 page per section for CSS-ref extraction only.
+    _config = raw.mode === "backlog" ? { mode: "backlog" } : raw;
+  }
   return _config;
 }
 

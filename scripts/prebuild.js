@@ -29,9 +29,14 @@ const SECTIONS = [
   { dir: 'seasons',     seed: '.seasons_seed',     pattern: /^\d{4}$/ },
 ];
 
+const isBacklogMode = config && config.mode === 'backlog';
+if (isBacklogMode) console.log('[prebuild] backlog mode — all sections will be backed up and restored; only backlog page rebuilds.');
+
 // legacy mode (no config): drivers + seasons are always fully rebuilt; others are passive.
 // config mode: "all" = fully rebuild; array or "current-pairs" = partial; absent = passive.
+// backlog mode: all sections passive — only seed page generated per section for CSS-ref extraction.
 function isActive(dir) {
+  if (isBacklogMode) return false;
   if (!config) return dir === 'drivers' || dir === 'seasons';
   return config[dir] === 'all';
 }
@@ -54,18 +59,24 @@ for (const { dir, seed, pattern } of SECTIONS) {
   // Passive or partial: back up existing pages and write a seed ID for CSS ref extraction
   if (fs.existsSync(outDir)) {
     const spec = config ? config[dir] : undefined;
-    const label = Array.isArray(spec)
-      ? `partial — will generate ${spec.length} specific page(s) and restore the rest.`
-      : spec === 'current-pairs'
-        ? 'current-pairs — will generate current-driver comparison pages and restore the rest.'
-        : 'cached — will generate 1 page and restore the rest.';
+    const label = isBacklogMode
+      ? 'backlog — will generate 1 seed page for CSS-ref extraction and restore the rest.'
+      : Array.isArray(spec)
+        ? `partial — will generate ${spec.length} specific page(s) and restore the rest.`
+        : spec === 'current-pairs'
+          ? 'current-pairs — will generate current-driver comparison pages and restore the rest.'
+          : 'cached — will generate 1 page and restore the rest.';
 
     console.log(`[prebuild] Backing up ${dir} pages...`);
     if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true });
     fs.cpSync(outDir, bakDir, { recursive: true });
-    const entries = fs.readdirSync(bakDir);
-    const first = entries.find((d) => pattern.test(d));
-    if (first) fs.writeFileSync(seedFile, first);
+    const entries = fs.readdirSync(bakDir).filter((d) => pattern.test(d));
+    // In backlog mode pick the highest numeric ID (newest/smallest team or most recent entry)
+    // to minimise seed-page generation time. In other modes pick the first (lowest) ID.
+    const seed = isBacklogMode
+      ? entries.sort((a, b) => parseInt(a) - parseInt(b)).pop()
+      : entries.sort((a, b) => parseInt(a) - parseInt(b)).shift();
+    if (seed) fs.writeFileSync(seedFile, seed);
     console.log(`[prebuild] ${dir}: ${label}`);
   } else {
     console.log(`[prebuild] ${dir}: no existing pages — will generate from scratch.`);

@@ -21,6 +21,16 @@ export interface RecordsData {
   races: RecordRow[];
 }
 
+export interface ConsecutiveData {
+  wins: RecordRow[];
+  podiums: RecordRow[];
+  poles: RecordRow[];
+  fastestLaps: RecordRow[];
+  points: RecordRow[];
+  finishes: RecordRow[];
+  starts: RecordRow[];
+}
+
 export type AgeRecords = {
   youngest: { wins: AgeRecordSet; podiums: AgeRecordSet; poles: AgeRecordSet; fastestLaps: AgeRecordSet; points: AgeRecordSet; races: AgeRecordSet };
   oldest:   { wins: AgeRecordSet; podiums: AgeRecordSet; poles: AgeRecordSet; fastestLaps: AgeRecordSet; points: AgeRecordSet; races: AgeRecordSet };
@@ -176,7 +186,7 @@ function AgeSection({ label, set, isOpen, onToggle }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function RecordsClient({ data, ageRecords }: { data: RecordsData; ageRecords: AgeRecords }) {
+export default function RecordsClient({ data, ageRecords, consecutive }: { data: RecordsData; ageRecords: AgeRecords; consecutive: ConsecutiveData }) {
   const [tab, setTab] = useState<Tab>("Most");
   const [open, setOpen] = useState<Set<string>>(new Set());
 
@@ -195,6 +205,16 @@ export default function RecordsClient({ data, ageRecords }: { data: RecordsData;
     { label: "Most Fastest Laps",   rows: data.fastestLaps, slug: "fastest-laps" },
     { label: "Most Points",         rows: data.points,      slug: "points" },
     { label: "Most Race Starts",    rows: data.races,       slug: "race-starts" },
+  ];
+
+  const consSections: { label: string; rows: RecordRow[]; slug: string }[] = [
+    { label: "Consecutive Wins",           rows: consecutive.wins,        slug: "cons-wins" },
+    { label: "Consecutive Podiums",        rows: consecutive.podiums,     slug: "cons-podiums" },
+    { label: "Consecutive Pole Positions", rows: consecutive.poles,       slug: "cons-poles" },
+    { label: "Consecutive Fastest Laps",   rows: consecutive.fastestLaps, slug: "cons-fastest-laps" },
+    { label: "Consecutive Points Finishes",rows: consecutive.points,      slug: "cons-points" },
+    { label: "Consecutive Finishes",       rows: consecutive.finishes,    slug: "cons-finishes" },
+    { label: "Consecutive Race Starts",    rows: consecutive.starts,      slug: "cons-starts" },
   ];
 
   const ageSections = (group: AgeRecords["youngest"], prefix: string) => [
@@ -265,7 +285,22 @@ export default function RecordsClient({ data, ageRecords }: { data: RecordsData;
         </div>
       )}
 
-      {(tab === "Consecutive" || tab === "Other") && (
+      {tab === "Consecutive" && (
+        <div className="space-y-3">
+          {consSections.map(s => (
+            <RecordSection
+              key={s.slug}
+              label={s.label}
+              rows={s.rows}
+              slug={s.slug}
+              isOpen={open.has(s.slug)}
+              onToggle={() => toggle(s.slug)}
+            />
+          ))}
+        </div>
+      )}
+
+      {tab === "Other" && (
         <div className="text-center py-20">
           <p className="text-zinc-600 text-sm">Coming soon</p>
         </div>

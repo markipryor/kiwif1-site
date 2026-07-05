@@ -7,7 +7,7 @@ export default async function SeasonsPage() {
   const seasons = await getAllSeasons();
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
+    <div className="max-w-5xl mx-auto px-6 py-12">
       <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mb-2">Formula 1</p>
       <h1 className="text-3xl font-bold text-white mb-8">All Seasons</h1>
 
@@ -17,9 +17,9 @@ export default async function SeasonsPage() {
             <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
               <th className="pb-3 text-left">Year</th>
               <th className="pb-3 text-right">Races</th>
-              <th className="pb-3 text-right">Drivers</th>
               <th className="pb-3 text-left pl-6">Champion</th>
-              <th className="pb-3 text-left pl-4">Runner-Up</th>
+              <th className="pb-3 text-right">Wins</th>
+              <th className="pb-3 text-right">Pts</th>
               <th className="pb-3 text-left pl-4">WCC</th>
             </tr>
           </thead>
@@ -32,7 +32,6 @@ export default async function SeasonsPage() {
                   </Link>
                 </td>
                 <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
-                <td className="py-2.5 text-zinc-400 text-right font-mono">{s.drivers}</td>
                 <td className="py-2.5 pl-6">
                   {s.isComplete ? (
                     <span className="text-zinc-300">{s.winner ?? "—"}</span>
@@ -43,8 +42,11 @@ export default async function SeasonsPage() {
                     </span>
                   )}
                 </td>
-                <td className="py-2.5 pl-4 text-zinc-500 text-sm">
-                  {s.isComplete ? (s.runnerUp ?? "—") : null}
+                <td className="py-2.5 text-right font-mono text-zinc-500 text-xs">
+                  {s.isComplete && s.winnerWins != null ? s.winnerWins : null}
+                </td>
+                <td className="py-2.5 text-right font-mono text-zinc-500 text-xs">
+                  {s.isComplete && s.winnerPoints != null ? Number(s.winnerPoints).toFixed(0) : null}
                 </td>
                 <td className="py-2.5 pl-4 text-zinc-500 text-sm">
                   {s.isComplete && s.year >= 1958 ? (s.constructorChampion ?? "—") : null}

@@ -1,26 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRecords } from "@/lib/queries";
+import { getRecords, getConsecutiveRecords } from "@/lib/queries";
 import PointsTable from "../PointsTable";
+import type { PointsRow } from "../RecordsClient";
 
 type RecordRow = { driverId: number; name: string; value: number };
 
-const CATEGORIES = {
-  wins:          { label: "Most Wins",           key: "wins"        as const },
-  podiums:       { label: "Most Podiums",         key: "podiums"     as const },
-  poles:         { label: "Most Pole Positions",  key: "poles"       as const },
-  "fastest-laps":{ label: "Most Fastest Laps",    key: "fastestLaps" as const },
-  points:        { label: "Most Points",          key: "points"      as const },
-  "race-starts": { label: "Most Race Starts",     key: "races"       as const },
+const MOST_CATEGORIES = {
+  wins:           { label: "Most Wins",           key: "wins"        as const, consecutive: false },
+  podiums:        { label: "Most Podiums",         key: "podiums"     as const, consecutive: false },
+  poles:          { label: "Most Pole Positions",  key: "poles"       as const, consecutive: false },
+  "fastest-laps": { label: "Most Fastest Laps",    key: "fastestLaps" as const, consecutive: false },
+  points:         { label: "Most Points",          key: "points"      as const, consecutive: false },
+  "race-starts":  { label: "Most Race Starts",     key: "races"       as const, consecutive: false },
 };
 
+const CONS_CATEGORIES = {
+  "cons-wins":         { label: "Consecutive Wins",            key: "wins"        as const, consecutive: true },
+  "cons-podiums":      { label: "Consecutive Podiums",         key: "podiums"     as const, consecutive: true },
+  "cons-poles":        { label: "Consecutive Pole Positions",  key: "poles"       as const, consecutive: true },
+  "cons-fastest-laps": { label: "Consecutive Fastest Laps",    key: "fastestLaps" as const, consecutive: true },
+  "cons-points":       { label: "Consecutive Points Finishes", key: "points"      as const, consecutive: true },
+  "cons-finishes":     { label: "Consecutive Finishes",        key: "finishes"    as const, consecutive: true },
+  "cons-starts":       { label: "Consecutive Race Starts",     key: "starts"      as const, consecutive: true },
+};
+
+const ALL_CATEGORIES = { ...MOST_CATEGORIES, ...CONS_CATEGORIES };
+
 export function generateStaticParams() {
-  return Object.keys(CATEGORIES).map(category => ({ category }));
+  return Object.keys(ALL_CATEGORIES).map(category => ({ category }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
-  const cat = CATEGORIES[category as keyof typeof CATEGORIES];
+  const cat = ALL_CATEGORIES[category as keyof typeof ALL_CATEGORIES];
   return { title: `${cat?.label ?? "Records"} — KiwiF1` };
 }
 
@@ -50,11 +63,21 @@ function RowItem({ rank, driverId, name, value, max }: {
 
 export default async function RecordCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
-  const cat = CATEGORIES[category as keyof typeof CATEGORIES];
+  const cat = ALL_CATEGORIES[category as keyof typeof ALL_CATEGORIES];
   if (!cat) notFound();
 
-  const records = await getRecords();
-  const rows = records[cat.key] as RecordRow[];
+  let rows: RecordRow[];
+  let pointsRows: PointsRow[] | null = null;
+
+  if (cat.consecutive) {
+    const consRecords = await getConsecutiveRecords();
+    rows = consRecords[cat.key as keyof typeof consRecords] as RecordRow[];
+  } else {
+    const records = await getRecords();
+    rows = records[cat.key as keyof typeof records] as RecordRow[];
+    if (category === "points") pointsRows = records.points;
+  }
+
   const max = Number(rows[0]?.value ?? 1);
 
   return (
@@ -65,11 +88,11 @@ export default async function RecordCategoryPage({ params }: { params: Promise<{
         </Link>
         <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mt-6 mb-2">Formula 1</p>
         <h1 className="text-3xl font-bold text-white">{cat.label}</h1>
-        <p className="text-zinc-500 text-sm mt-1">{rows.length} drivers</p>
+        <p className="text-zinc-500 text-sm mt-1">{rows.length} driver{rows.length !== 1 ? "s" : ""}</p>
       </div>
 
-      {category === "points" ? (
-        <PointsTable rows={records.points} showTitle={false} />
+      {pointsRows ? (
+        <PointsTable rows={pointsRows} showTitle={false} />
       ) : (
         <div className="space-y-2">
           {rows.map((r, i) => (

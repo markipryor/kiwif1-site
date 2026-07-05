@@ -1,7 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllSeasons, getSeasonRaces, getRaceById, getRaceResults, getRacePole, getRaceFastestLap, getRaceSprintResults } from "@/lib/queries";
+import { getAllSeasons, getSeasonRaces, getRaceById, getRaceResults, getRacePole, getRaceFastestLap, getRaceSprintResults, getRaceMilestones, getAdjacentRaces, type MilestoneEntry } from "@/lib/queries";
 import { getBuildConfig, getSeed } from "@/lib/build-config";
+
+function ordinal(n: number): string {
+  const v = n % 100;
+  const s = ['th','st','nd','rd'];
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+const MILESTONE_TYPE_ORDER = ['start','win','podium','pole','fastestLap','points'] as const;
+
+const MILESTONE_META: Record<MilestoneEntry['type'], { icon: string; label: (n: number) => string }> = {
+  start:      { icon: '🏎', label: n => `${ordinal(n)} race start` },
+  win:        { icon: '🏆', label: n => `${ordinal(n)} win` },
+  podium:     { icon: '🥊', label: n => `${ordinal(n)} podium` },
+  pole:       { icon: '🔵', label: n => `${ordinal(n)} pole position` },
+  fastestLap: { icon: '⚡', label: n => `${ordinal(n)} fastest lap` },
+  points:     { icon: '●', label: n => n === 0 ? 'First career points' : `${n} career points` },
+};
 
 export async function generateStaticParams() {
   const cfg = getBuildConfig();
@@ -29,12 +46,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function RacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [race, results, pole, fastestLap, sprintResults] = await Promise.all([
+  const [race, results, pole, fastestLap, sprintResults, milestones, adjacent] = await Promise.all([
     getRaceById(Number(id)),
     getRaceResults(Number(id)),
     getRacePole(Number(id)),
     getRaceFastestLap(Number(id)),
     getRaceSprintResults(Number(id)),
+    getRaceMilestones(Number(id)),
+    getAdjacentRaces(Number(id)),
   ]);
 
   if (!race) notFound();
@@ -44,9 +63,23 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <Link href={`/seasons/${year}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
-        ← {year} Season
-      </Link>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-0">
+        <Link href={`/seasons/${year}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
+          ← {year} Season
+        </Link>
+        <div className="flex items-center gap-4">
+          {adjacent.prevId && (
+            <Link href={`/races/${adjacent.prevId}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
+              ← {adjacent.prevYear} {adjacent.prevTitle}
+            </Link>
+          )}
+          {adjacent.nextId && (
+            <Link href={`/races/${adjacent.nextId}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
+              {adjacent.nextYear} {adjacent.nextTitle} →
+            </Link>
+          )}
+        </div>
+      </div>
 
       <div className="mt-6 mb-6">
         <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">
@@ -107,6 +140,30 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
           </tbody>
         </table>
       </div>
+
+      {/* Milestones */}
+      {milestones.length > 0 && (
+        <>
+          <h2 className="text-lg font-bold text-white mb-4">Milestones</h2>
+          <div className="space-y-1.5 mb-12">
+            {[...milestones]
+              .sort((a, b) => MILESTONE_TYPE_ORDER.indexOf(a.type) - MILESTONE_TYPE_ORDER.indexOf(b.type))
+              .map((m, i) => {
+                const meta = MILESTONE_META[m.type];
+                return (
+                  <div key={i} className="flex items-center gap-3 bg-zinc-900/50 border border-zinc-800/40 rounded-lg px-4 py-2.5 text-sm">
+                    <span className="w-5 text-center shrink-0">{meta.icon}</span>
+                    <Link href={`/drivers/${m.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors shrink-0">
+                      {m.driverName}
+                    </Link>
+                    <span className="text-zinc-500">—</span>
+                    <span className="text-zinc-300">{meta.label(m.n)}</span>
+                  </div>
+                );
+              })}
+          </div>
+        </>
+      )}
 
       {/* Sprint results */}
       {sprintResults.length > 0 && (

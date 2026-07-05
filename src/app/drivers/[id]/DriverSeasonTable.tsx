@@ -30,7 +30,7 @@ type RaceRow = {
 };
 
 type SeasonPosition = { year: number; champPos: number };
-
+type CumulativeRow = { grandprixId: number; cumPts: number; champPos: number };
 type Teammate = { id: number; name: string };
 
 type MergedSeason = {
@@ -59,23 +59,34 @@ function parseTeammateData(data: string | null): Teammate[] {
   });
 }
 
-function RaceRowEl({ r }: { r: RaceRow }) {
+function RaceRowEl({ r, cumMap }: { r: RaceRow; cumMap: Map<number, CumulativeRow> }) {
+  const cum = cumMap.get(r.grandprixId);
   return (
-    <tr key={r.grandprixId} className="border-b border-zinc-800/30 last:border-0 hover:bg-zinc-900/40">
-      <td className="px-4 py-1.5">
+    <tr className="border-b border-zinc-800/30 last:border-0 hover:bg-zinc-900/40">
+      <td className="px-3 py-1.5">
         <Link href={`/races/${r.grandprixId}/`} className="text-zinc-300 hover:text-white transition-colors">
           {r.raceTitle}
         </Link>
       </td>
-      <td className="px-4 py-1.5 text-right font-mono text-zinc-500">{r.grid || "—"}</td>
-      <td className="px-4 py-1.5 text-right font-mono">
+      <td className="px-2 py-1.5 text-right font-mono text-zinc-500 w-10">{r.grid || "—"}</td>
+      <td className="px-2 py-1.5 text-right font-mono w-10">
         <span className={r.place === "1" ? "text-yellow-400 font-bold" : "text-zinc-300"}>{r.place || "—"}</span>
       </td>
-      <td className="px-4 py-1.5 text-center">
+      <td className="px-2 py-1.5 text-center w-6">
         {r.hasFastestLap ? <span className="text-purple-400 text-xs font-mono" title="Fastest Lap">FL</span> : null}
       </td>
-      <td className="px-4 py-1.5 text-right font-mono text-zinc-400">
+      <td className="px-2 py-1.5 text-right font-mono text-zinc-400 w-10">
         {Number(r.points) > 0 ? Number(r.points).toFixed(0) : "—"}
+      </td>
+      <td className="px-2 py-1.5 text-right font-mono text-zinc-300 w-14">
+        {cum ? Number(cum.cumPts).toFixed(0) : "—"}
+      </td>
+      <td className="px-2 py-1.5 text-right font-mono w-10">
+        {cum ? (
+          <span className={cum.champPos === 1 ? "text-yellow-400 font-bold" : "text-zinc-400"}>
+            P{cum.champPos}
+          </span>
+        ) : "—"}
       </td>
     </tr>
   );
@@ -85,14 +96,17 @@ export default function DriverSeasonTable({
   seasons,
   raceResults,
   seasonPositions,
+  seasonCumulative,
 }: {
   seasons: SeasonRow[];
   raceResults: RaceRow[];
   seasonPositions: SeasonPosition[];
+  seasonCumulative: CumulativeRow[];
 }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  const posMap = new Map(seasonPositions.map((p) => [p.year, p.champPos]));
+  const posMap = new Map((seasonPositions ?? []).map((p) => [p.year, p.champPos]));
+  const cumMap = new Map((seasonCumulative ?? []).map((c) => [c.grandprixId, c]));
 
   const resultsByYear = new Map<number, RaceRow[]>();
   for (const r of raceResults) {
@@ -153,15 +167,15 @@ export default function DriverSeasonTable({
         <thead>
           <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
             <th className="pb-3 text-left">Year</th>
-            <th className="pb-3 text-right">Pos</th>
+            <th className="pb-3 text-right w-10">Pos</th>
             <th className="pb-3 text-left pl-4">Constructor</th>
             <th className="pb-3 text-left pl-4">Teammate(s)</th>
-            <th className="pb-3 text-right">Races</th>
-            <th className="pb-3 text-right">Wins</th>
-            <th className="pb-3 text-right">Pods</th>
-            <th className="pb-3 text-right">Poles</th>
-            <th className="pb-3 text-right">FL</th>
-            <th className="pb-3 text-right">Pts</th>
+            <th className="pb-3 text-right w-12">Races</th>
+            <th className="pb-3 text-right w-12">Wins</th>
+            <th className="pb-3 text-right w-12">Pods</th>
+            <th className="pb-3 text-right w-12">Poles</th>
+            <th className="pb-3 text-right w-10">FL</th>
+            <th className="pb-3 text-right w-14">Pts</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800/60">
@@ -190,7 +204,7 @@ export default function DriverSeasonTable({
                     )}
                   </div>
                 </td>
-                <td className="py-2.5 text-right font-mono">
+                <td className="py-2.5 text-right font-mono w-10">
                   {pos != null ? (
                     <span className={pos === 1 ? "text-yellow-400 font-bold" : "text-zinc-400"}>P{pos}</span>
                   ) : (
@@ -229,19 +243,18 @@ export default function DriverSeasonTable({
                     </span>
                   ) : <span className="text-zinc-700">—</span>}
                 </td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{s.races}</td>
-                <td className="py-2.5 text-right font-mono">
+                <td className="py-2.5 text-zinc-300 text-right font-mono w-12">{s.races}</td>
+                <td className="py-2.5 text-right font-mono w-12">
                   <span className={s.wins > 0 ? "text-white font-semibold" : "text-zinc-500"}>{s.wins}</span>
                 </td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{fmt(s.podiums)}</td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{fmt(s.poles)}</td>
-                <td className="py-2.5 text-zinc-300 text-right font-mono">{fmt(s.fastestLaps)}</td>
-                <td className="py-2.5 text-zinc-400 text-right font-mono">{s.points.toFixed(0)}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono w-12">{fmt(s.podiums)}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono w-12">{fmt(s.poles)}</td>
+                <td className="py-2.5 text-zinc-300 text-right font-mono w-10">{fmt(s.fastestLaps)}</td>
+                <td className="py-2.5 text-zinc-400 text-right font-mono w-14">{s.points.toFixed(0)}</td>
               </tr>,
             ];
 
             if (isExpanded) {
-              // Group races by constructor when driver switched teams mid-season
               let raceBody: React.ReactNode;
               if (multiConstructor && races.length > 0) {
                 const groups = new Map<number, { name: string; races: RaceRow[] }>();
@@ -258,18 +271,18 @@ export default function DriverSeasonTable({
                   return (
                     <>
                       <tr key={`${cid}-hdr`} className="bg-zinc-900/50">
-                        <td colSpan={5} className="px-4 py-1 text-zinc-500 text-xs font-medium">{name}</td>
+                        <td colSpan={7} className="px-3 py-1 text-zinc-500 text-xs font-medium">{name}</td>
                       </tr>
-                      {cRaces.map((r) => <RaceRowEl key={r.grandprixId} r={r} />)}
+                      {cRaces.map((r) => <RaceRowEl key={r.grandprixId} r={r} cumMap={cumMap} />)}
                     </>
                   );
                 });
               } else {
                 raceBody = races.length > 0
-                  ? races.map((r) => <RaceRowEl key={r.grandprixId} r={r} />)
+                  ? races.map((r) => <RaceRowEl key={r.grandprixId} r={r} cumMap={cumMap} />)
                   : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-3 text-zinc-600 text-center">No race detail available</td>
+                      <td colSpan={7} className="px-3 py-3 text-zinc-600 text-center">No race detail available</td>
                     </tr>
                   );
               }
@@ -281,11 +294,13 @@ export default function DriverSeasonTable({
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="text-zinc-600 border-b border-zinc-800/60">
-                            <th className="px-4 py-2 text-left font-normal uppercase tracking-wider">Race</th>
-                            <th className="px-4 py-2 text-right font-normal uppercase tracking-wider">Grid</th>
-                            <th className="px-4 py-2 text-right font-normal uppercase tracking-wider">Finish</th>
-                            <th className="px-4 py-2 text-center font-normal uppercase tracking-wider w-8"></th>
-                            <th className="px-4 py-2 text-right font-normal uppercase tracking-wider">Pts</th>
+                            <th className="px-3 py-2 text-left font-normal uppercase tracking-wider">Race</th>
+                            <th className="px-2 py-2 text-right font-normal uppercase tracking-wider w-10">Grid</th>
+                            <th className="px-2 py-2 text-right font-normal uppercase tracking-wider w-10">Fin</th>
+                            <th className="px-2 py-2 text-center font-normal w-6"></th>
+                            <th className="px-2 py-2 text-right font-normal uppercase tracking-wider w-10">Pts</th>
+                            <th className="px-2 py-2 text-right font-normal uppercase tracking-wider w-14">Cum</th>
+                            <th className="px-2 py-2 text-right font-normal uppercase tracking-wider w-10">Chp</th>
                           </tr>
                         </thead>
                         <tbody>

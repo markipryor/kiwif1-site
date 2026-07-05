@@ -53,9 +53,13 @@ const SECTIONS = [
   { dir: 'seasons',     seed: '.seasons_seed' },
 ];
 
+const isBacklogMode = config && config.mode === 'backlog';
+
 // legacy mode (no config): drivers + seasons active, no backup; others passive.
 // config mode: "all" = active; array or "current-pairs" = partial; absent = passive.
+// backlog mode: all sections passive — fresh pages are seed-only, restore backup wholesale.
 function getSectionKind(dir) {
+  if (isBacklogMode) return 'passive';
   if (!config) return (dir === 'drivers' || dir === 'seasons') ? 'active' : 'passive';
   const spec = config[dir];
   if (spec === 'all') return 'active';

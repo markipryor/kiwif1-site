@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions, getDriverRanks, getDriverRaceResults } from "@/lib/queries";
+import { getAllDrivers, getDriverById, getDriverSeasons, getDriverTeammates, getDriverChampionships, getDriverSeasonPositions, getDriverRanks, getDriverRaceResults, getDriverSeasonCumulative } from "@/lib/queries";
 import { getBuildConfig, getSeed } from "@/lib/build-config";
 import DriverSeasonTable from "./DriverSeasonTable";
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function DriverPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [driver, seasons, teammates, championships, seasonPositions, ranks, raceResults] = await Promise.all([
+  const [driver, seasons, teammates, championships, seasonPositions, ranks, raceResults, seasonCumulative] = await Promise.all([
     getDriverById(Number(id)),
     getDriverSeasons(Number(id)),
     getDriverTeammates(Number(id)),
@@ -35,18 +35,19 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
     getDriverSeasonPositions(Number(id)),
     getDriverRanks(Number(id)),
     getDriverRaceResults(Number(id)),
+    getDriverSeasonCumulative(Number(id)),
   ]);
 
   if (!driver) notFound();
 
   const stats = [
-    { label: "Races", value: driver.races, rank: ranks.racesRank },
-    { label: "Wins", value: driver.wins, rank: Number(driver.wins) > 0 ? ranks.winsRank : null },
-    { label: "Podiums", value: driver.podiums, rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null },
-    { label: "Poles", value: driver.poles, rank: Number(driver.poles) > 0 ? ranks.polesRank : null },
-    { label: "Fastest Laps", value: driver.fastestLaps, rank: Number(driver.fastestLaps) > 0 ? ranks.fastestLapsRank : null },
-    { label: "Points", value: Number(driver.points).toFixed(0), rank: Number(driver.points) > 0 ? ranks.pointsRank : null },
-    { label: "Seasons", value: driver.seasons },
+    { label: "Races",        value: driver.races,                       rank: ranks.racesRank,                                          recordSlug: "race-starts" },
+    { label: "Wins",         value: driver.wins,                        rank: Number(driver.wins) > 0 ? ranks.winsRank : null,          recordSlug: "wins" },
+    { label: "Podiums",      value: driver.podiums,                     rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null,    recordSlug: "podiums" },
+    { label: "Poles",        value: driver.poles,                       rank: Number(driver.poles) > 0 ? ranks.polesRank : null,        recordSlug: "poles" },
+    { label: "Fastest Laps", value: driver.fastestLaps,                 rank: Number(driver.fastestLaps) > 0 ? ranks.fastestLapsRank : null, recordSlug: "fastest-laps" },
+    { label: "Points",       value: Number(driver.points).toFixed(0),   rank: Number(driver.points) > 0 ? ranks.pointsRank : null,     recordSlug: "points" },
+    { label: "Seasons",      value: driver.seasons },
   ];
 
   const champStars = championships > 4
@@ -95,9 +96,11 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-center">
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
-            {"rank" in s && s.rank != null && (
+            {"rank" in s && s.rank != null && "recordSlug" in s && s.recordSlug ? (
+              <Link href={`/records/${s.recordSlug}/`} className={`text-xs mt-0.5 block hover:underline ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</Link>
+            ) : "rank" in s && s.rank != null ? (
               <p className={`text-xs mt-0.5 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</p>
-            )}
+            ) : null}
           </div>
         ))}
       </div>
@@ -137,6 +140,7 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
         seasons={seasons}
         raceResults={raceResults}
         seasonPositions={seasonPositions}
+        seasonCumulative={seasonCumulative}
       />
     </div>
   );

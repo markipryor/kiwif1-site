@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getAllSeasons, getSeasonRaces, getSeasonRaceWinners,
-  getSeasonDriverStandings, getSeasonConstructorStandings,
+  getSeasonDriverStandings, getSeasonConstructorStandings, pointsSystem, getAdjacentSeasons,
 } from "@/lib/queries";
 import { getBuildConfig, getSeed } from "@/lib/build-config";
 
@@ -29,11 +29,12 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
   const { year } = await params;
   const y = Number(year);
 
-  const [races, winners, driverStandings, constructorStandings] = await Promise.all([
+  const [races, winners, driverStandings, constructorStandings, adjacent] = await Promise.all([
     getSeasonRaces(y),
     getSeasonRaceWinners(y),
     getSeasonDriverStandings(y),
     getSeasonConstructorStandings(y),
+    getAdjacentSeasons(y),
   ]);
 
   if (races.length === 0) notFound();
@@ -45,11 +46,25 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <Link href="/seasons/" className="text-zinc-500 hover:text-white text-sm transition-colors">
-        ← All Seasons
-      </Link>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+        <Link href="/seasons/" className="text-zinc-500 hover:text-white text-sm transition-colors">
+          ← All Seasons
+        </Link>
+        <div className="flex items-center gap-4">
+          {adjacent.prevYear && (
+            <Link href={`/seasons/${adjacent.prevYear}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
+              ← {adjacent.prevYear}
+            </Link>
+          )}
+          {adjacent.nextYear && (
+            <Link href={`/seasons/${adjacent.nextYear}/`} className="text-zinc-500 hover:text-white text-sm transition-colors">
+              {adjacent.nextYear} →
+            </Link>
+          )}
+        </div>
+      </div>
 
-      <div className="mt-6 mb-10">
+      <div className="mt-0 mb-10">
         <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mb-1">Season</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-4xl font-bold text-white">{year} Formula 1 World Championship</h1>
@@ -60,7 +75,12 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
       </div>
 
       {/* Driver standings */}
-      <h2 className="text-lg font-bold text-white mb-4">{isComplete ? "Driver Standings" : "Driver Standings (In Progress)"}</h2>
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-lg font-bold text-white">{isComplete ? "Driver Standings" : "Driver Standings (In Progress)"}</h2>
+        <span className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-400 px-2.5 py-1 rounded-full font-mono shrink-0">
+          {pointsSystem(y)}
+        </span>
+      </div>
       <div className="space-y-2 mb-12">
         {driverStandings.map((d) => (
           <div key={`${d.driverId}-${d.constructorId}`} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">

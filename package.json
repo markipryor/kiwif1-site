@@ -29,7 +29,10 @@
     "ship:seasons": "npm run build:seasons && git add -A && git commit -m \"ship: seasons\" && git push && npm run deploy",
     "ship:records": "npm run build:records && git add -A && git commit -m \"ship: records\" && git push && npm run deploy",
     "ship:backlog": "npm run build:backlog && git add -A && git commit -m \"ship: backlog\" && git push && npm run deploy",
-    "ship:homepage": "npm run build:homepage && git add -A && git commit -m \"ship: homepage\" && git push && npm run deploy"
+    "ship:homepage": "npm run build:homepage && git add -A && git commit -m \"ship: homepage\" && git push && npm run deploy",
+    "validate": "node scripts/validate-build.js",
+    "smoke": "node scripts/smoke-test.js",
+    "smoke:prod": "node scripts/smoke-test.js https://out-beta-five.vercel.app"
   },
   "dependencies": {
     "mysql2": "^3.22.5",
