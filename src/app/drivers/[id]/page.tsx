@@ -11,7 +11,7 @@ export async function generateStaticParams() {
     const all = await getAllDrivers();
     return all.map((d) => ({ id: String(d.id) }));
   }
-  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  if (Array.isArray(spec) && spec.length > 0) return spec.map((id) => ({ id: String(id) }));
   const seed = getSeed(".drivers_seed");
   if (seed) return [{ id: seed }];
   const all = await getAllDrivers();

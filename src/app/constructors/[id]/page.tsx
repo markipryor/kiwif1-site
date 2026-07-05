@@ -11,7 +11,7 @@ export async function generateStaticParams() {
     const constructors = await getAllConstructors();
     return constructors.map((c) => ({ id: String(c.id) }));
   }
-  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  if (Array.isArray(spec) && spec.length > 0) return spec.map((id) => ({ id: String(id) }));
   const seed = getSeed(".constructors_seed");
   if (seed) return [{ id: seed }];
   const constructors = await getAllConstructors();

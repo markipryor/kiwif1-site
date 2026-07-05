@@ -13,7 +13,7 @@ export async function generateStaticParams() {
     const seasons = await getAllSeasons();
     return seasons.map((s) => ({ year: String(s.year) }));
   }
-  if (Array.isArray(spec)) return spec.map((year) => ({ year: String(year) }));
+  if (Array.isArray(spec) && spec.length > 0) return spec.map((year) => ({ year: String(year) }));
   const seed = getSeed(".seasons_seed");
   if (seed) return [{ year: seed }];
   const seasons = await getAllSeasons();

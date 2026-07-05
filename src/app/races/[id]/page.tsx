@@ -28,7 +28,7 @@ export async function generateStaticParams() {
     const allRaces = await Promise.all(seasons.map((s) => getSeasonRaces(s.year)));
     return allRaces.flat().map((r) => ({ id: String(r.id) }));
   }
-  if (Array.isArray(spec)) return spec.map((id) => ({ id: String(id) }));
+  if (Array.isArray(spec) && spec.length > 0) return spec.map((id) => ({ id: String(id) }));
   const seed = getSeed(".races_seed");
   if (seed) return [{ id: seed }];
   const seasons = await getAllSeasons();
@@ -95,6 +95,8 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
           <span>⚡ Fastest lap: <span className="text-white">{fastestLap.driverName}</span> {fastestLap.time} (lap {fastestLap.lap})</span>
         )}
         {race.sprint ? <span className="text-purple-400">⚡ Sprint weekend</span> : null}
+        {race.bestPoleTime && <span className="text-zinc-600">Circuit pole record: <span className="text-zinc-400">{race.bestPoleTime}</span></span>}
+        {race.bestRaceLapTime && <span className="text-zinc-600">Circuit lap record: <span className="text-zinc-400">{race.bestRaceLapTime}</span></span>}
       </div>
 
       {/* Race results */}

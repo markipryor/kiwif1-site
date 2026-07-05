@@ -91,6 +91,8 @@ LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
 - `flBonus()` — requires `LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id`
 - Sprint points — require `LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id`
 
+**Empty `generateStaticParams` arrays** — When `build:race` is run before race results are entered, `setup-build.js` returns 0 drivers and 0 constructors, producing `drivers: [], constructors: []` in `.build-config.json`. `generateStaticParams()` returning `[]` causes: `Error: Page "/constructors/[id]" is missing "generateStaticParams()"`. Fix already applied: all section pages guard with `Array.isArray(spec) && spec.length > 0` before mapping, so an empty array falls through to the seed file instead.
+
 **Performance** — `totalPts()` with sprint/FL joins is ~100× slower than `racePts()`. Complex joins on the seasons list page caused 60s build timeouts. Use `racePts()` for the seasons list winner column; `totalPts()` elsewhere.
 
 ## Milestone thresholds

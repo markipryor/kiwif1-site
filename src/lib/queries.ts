@@ -635,7 +635,8 @@ export async function getRaceById(id: number): Promise<Race | null> {
     SELECT
       gp.id, gp.date, gp.shortTitle, gp.fullTitle, gp.laps, gp.sprint,
       COALESCE(ci.name, '') AS circuit, COALESCE(ci.city, '') AS circuitCity,
-      COALESCE(n.adjective, '') AS country
+      COALESCE(n.adjective, '') AS country,
+      cl.bestPoleTime, cl.bestRaceLapTime
     FROM grandsprix gp
     LEFT JOIN circuitlayouts cl ON cl.id = gp.circuitlayout_id AND gp.circuitlayout_id != 0
     LEFT JOIN circuits ci ON cl.circuit_id = ci.id

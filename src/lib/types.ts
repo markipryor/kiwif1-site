@@ -59,6 +59,8 @@ export interface Race {
   circuit: string;
   circuitCity: string;
   country: string;
+  bestPoleTime: string | null;
+  bestRaceLapTime: string | null;
 }
 
 export interface RaceResult {
