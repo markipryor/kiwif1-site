@@ -193,6 +193,17 @@ export const sections: Section[] = [
 
 export const deployed: { version: string; changes: string[] }[] = [
   {
+    version: "v6.4.3",
+    changes: [
+      "Constructor pages: Flag icon shown next to nationality in page header",
+      "Constructor pages: Team History — fixed trailing '0' on inactive team names",
+      "Constructor pages: Team History — last entry no longer shows '-present' unless team is currently active",
+      "Constructor pages: Team History — multi-value formedFrom/became now traversed correctly (Arrows↔Footwork, March↔Leyton House, Renault↔Lotus, Sauber multi-era)",
+      "Constructor pages: Team History — year ranges computed correctly for returning constructors",
+      "Backlog: KF1-R-06 (Constructor records section) added",
+    ],
+  },
+  {
     version: "v6.4.2",
     changes: [
       "Constructor pages: Founder displayed below constructor name when set in DB",
