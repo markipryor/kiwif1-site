@@ -113,7 +113,17 @@ Each timed-out query can leave 4–12 GB of `#sql*.MAD/.MAI` files. Multiple fai
 
 ## Constructor chain query
 
-`getConstructorChain` in `queries.ts` uses a WITH RECURSIVE CTE with `FIND_IN_SET` cycle guards in both the `ancestors` and `chain` CTEs. This is necessary because some constructors "returned" under the same name after becoming a different team (e.g. Sauber → BMW Sauber → Sauber, March → Leyton House → March), creating closed loops in the `formedFrom`/`became` fields. The cycle guards cause the chain to terminate gracefully when a constructor would be revisited. Do not remove them — without them, affected constructor pages hang at the 1000-iteration recursion limit.
+`getConstructorChain` in `queries.ts` uses a **JavaScript traversal** (not SQL WITH RECURSIVE — the CTE approach was replaced because FIND_IN_SET cycle detection prevented returning constructors from appearing more than once).
+
+**`formedFrom` / `became` field format** — both are `varchar(11)` and can contain:
+- A single ID: `"156"` — one predecessor/successor
+- `"0"` — no predecessor/successor (root or terminal)
+- `NULL` — treated as `"0"` (Apollon id=173, Cadillac id=177 have NULL; always handle)
+- Comma-separated IDs: `"0,87"` / `"87,0"` — the constructor had **multiple stints**. Index `i` in `formedFrom` pairs with index `i` in `became` to define one stint. Example: March has `formedFrom="0,87"` and `became="87,0"`, meaning stint 0 has no predecessor and leads to Leyton House (87); stint 1 comes from Leyton House and has no successor. This produces the chain March → Leyton House → March.
+
+**Traversal**: walk backwards from the requested constructor to find the chain root, then walk forwards. Use `(constructorId:instanceIndex)` as visited-set keys so the same constructor can appear at multiple positions. Year ranges come from race results per constructor_id; the display caps each entry's end at `nextEntry.rawFirstYear − 1` when the next entry has a later firstYear, so returning constructors don't bleed their full historical range into the display.
+
+**MySQL tinyint in JSX** — `current`, `indyOnly` and similar DB fields come back as JavaScript numbers `0`/`1`, not booleans. In JSX, `{0 && <Component>}` renders the literal character `"0"` in the DOM (React renders falsy numbers, unlike `false`/`null`/`undefined`). Always coerce: `{!!row.current && <Component>}`. This has caused bugs on both driver pages (KF1-D-BUG-01) and constructor Team History.
 
 ## Versioning
 
