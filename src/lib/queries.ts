@@ -600,38 +600,72 @@ export async function getConstructorRanks(constructorId: number): Promise<Constr
   return map.get(constructorId) ?? null;
 }
 
-export async function getConstructorChain(id: number) {
-  return query<{ id: number; displayName: string; current: boolean; pos: number; firstYear: number; lastYear: number }>(`
-    WITH RECURSIVE
-    ancestors AS (
-      SELECT id, formedFrom, became, current, CAST(id AS CHAR(500)) AS seen
-      FROM constructors WHERE id = ?
-      UNION ALL
-      SELECT c.id, c.formedFrom, c.became, c.current, CONCAT(a.seen, ',', c.id)
-      FROM constructors c JOIN ancestors a
-        ON c.id = CAST(a.formedFrom AS UNSIGNED) AND CAST(a.formedFrom AS UNSIGNED) > 0
-        AND FIND_IN_SET(c.id, a.seen) = 0
-    ),
-    chain AS (
-      SELECT c.id, COALESCE(NULLIF(c.name,''), c.shortName) AS displayName,
-             c.formedFrom, c.became, c.current, 0 AS pos, CAST(c.id AS CHAR(500)) AS seen
-      FROM constructors c JOIN ancestors a ON c.id = a.id AND CAST(a.formedFrom AS UNSIGNED) = 0
-      UNION ALL
-      SELECT c.id, COALESCE(NULLIF(c.name,''), c.shortName),
-             c.formedFrom, c.became, c.current, ch.pos + 1, CONCAT(ch.seen, ',', c.id)
-      FROM constructors c JOIN chain ch
-        ON c.id = CAST(ch.became AS UNSIGNED) AND CAST(ch.became AS UNSIGNED) > 0
-        AND FIND_IN_SET(c.id, ch.seen) = 0
-    )
-    SELECT ch.id, ch.displayName, ch.current, ch.pos,
-           MIN(YEAR(gp.date)) AS firstYear, MAX(YEAR(gp.date)) AS lastYear
-    FROM chain ch
-    JOIN entrants e ON e.constructor_id = ch.id
-    JOIN results r ON r.entrant_id = e.id
-    JOIN grandsprix gp ON r.grandprix_id = gp.id
-    GROUP BY ch.id, ch.displayName, ch.current, ch.pos
-    ORDER BY ch.pos
-  `, [id]);
+export async function getConstructorChain(id: number): Promise<{ id: number; displayName: string; current: number; pos: number; firstYear: number | null; lastYear: number | null }[]> {
+  const [allConstructors, yearRanges] = await Promise.all([
+    query<{ id: number; displayName: string; formedFrom: string; became: string; current: number }>(`
+      SELECT id, COALESCE(NULLIF(name,''), shortName) AS displayName, formedFrom, became, current
+      FROM constructors
+    `),
+    query<{ constructorId: number; firstYear: number; lastYear: number }>(`
+      SELECT e.constructor_id AS constructorId,
+             MIN(YEAR(gp.date)) AS firstYear, MAX(YEAR(gp.date)) AS lastYear
+      FROM results r
+      JOIN entrants e ON r.entrant_id = e.id
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      GROUP BY e.constructor_id
+    `),
+  ]);
+
+  const cMap = new Map(allConstructors.map(c => [c.id, c]));
+  const yearMap = new Map(yearRanges.map(r => [r.constructorId, { firstYear: r.firstYear, lastYear: r.lastYear }]));
+
+  function parseVals(s: string): number[] {
+    return s.split(',').map(v => parseInt(v.trim(), 10));
+  }
+
+  // Walk backwards from id to find chain root
+  let cur = id;
+  let inst = 0;
+  const seenBack = new Set<string>();
+  while (true) {
+    const c = cMap.get(cur);
+    if (!c) break;
+    const prevId = parseVals(c.formedFrom)[inst] ?? 0;
+    if (prevId <= 0) break;
+    const key = `${cur}:${inst}`;
+    if (seenBack.has(key)) break;
+    seenBack.add(key);
+    const prev = cMap.get(prevId);
+    if (!prev) break;
+    const nextInst = parseVals(prev.became).indexOf(cur);
+    if (nextInst === -1) break;
+    cur = prevId;
+    inst = nextInst;
+  }
+
+  // Walk forwards building chain entries
+  const entries: { id: number; displayName: string; current: number; pos: number; firstYear: number | null; lastYear: number | null }[] = [];
+  const seenFwd = new Set<string>();
+  let pos = 0;
+  while (true) {
+    const key = `${cur}:${inst}`;
+    if (seenFwd.has(key)) break;
+    seenFwd.add(key);
+    const c = cMap.get(cur);
+    if (!c) break;
+    const years = yearMap.get(cur);
+    entries.push({ id: cur, displayName: c.displayName ?? '', current: c.current, pos: pos++, firstYear: years?.firstYear ?? null, lastYear: years?.lastYear ?? null });
+    const nextId = parseVals(c.became)[inst] ?? 0;
+    if (nextId <= 0) break;
+    const next = cMap.get(nextId);
+    if (!next) break;
+    const nextInst = parseVals(next.formedFrom).indexOf(cur);
+    if (nextInst === -1) break;
+    cur = nextId;
+    inst = nextInst;
+  }
+
+  return entries;
 }
 
 // ─── Races ─────────────────────────────────────────────────────────────────────

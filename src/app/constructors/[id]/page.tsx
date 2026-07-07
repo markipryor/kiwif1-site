@@ -25,9 +25,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `${constructor.name} — KiwiF1` };
 }
 
-function yearLabel(start: number, end: number | "present") {
+function yearLabel(start: number | null, end: number | "present" | null) {
+  if (start === null || end === null) return "—";
   if (end === "present") return start === new Date().getFullYear() ? String(start) : `${start}–present`;
   if (start === end) return String(start);
+  if (start > end) return String(start);
   return `${start}–${end}`;
 }
 
@@ -53,11 +55,14 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
   // Compute effective year ranges — handles constructors with pre-chain historical entries
   let prevEnd: number | null = null;
   const chainWithYears = chain.map((row, i) => {
-    const start = prevEnd !== null ? Math.max(Number(row.firstYear), prevEnd + 1) : Number(row.firstYear);
     const isLast = i === chain.length - 1;
-    const end: number | "present" = isLast ? "present" : Number(row.lastYear);
-    prevEnd = Number(row.lastYear);
-    return { ...row, start, end };
+    if (row.firstYear === null || row.lastYear === null) {
+      return { ...row, start: null as number | null, end: null as number | "present" | null };
+    }
+    const start = prevEnd !== null ? Math.max(row.firstYear, prevEnd + 1) : row.firstYear;
+    const end: number | "present" = (isLast && !!row.current) ? "present" : row.lastYear;
+    prevEnd = row.lastYear;
+    return { ...row, start: start as number | null, end: end as number | "present" | null };
   });
 
   const isCurrent = Boolean(constructor.current);
@@ -80,7 +85,12 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
 
       <div className="mt-6 mb-10">
         {constructor.nationality && (
-          <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">{constructor.nationality}</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+            {constructor.nationalityCode && (
+              <span className={`fi fi-${constructor.nationalityCode.toLowerCase()} fis`} title={constructor.nationality} style={{ fontSize: "1rem" }} />
+            )}
+            {constructor.nationality}
+          </p>
         )}
         <h1 className="text-4xl font-bold text-white">{constructor.name}</h1>
         {constructor.founder && (
@@ -131,7 +141,7 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
                       {row.displayName}
                     </Link>
                   )}
-                  {row.current && (
+                  {!!row.current && (
                     <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-medium">Current</span>
                   )}
                 </div>
