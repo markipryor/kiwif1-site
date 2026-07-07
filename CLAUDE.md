@@ -25,6 +25,8 @@ Use `npm run build:<mode>` — this runs `setup-build.js` to set `.build-config.
 npm run deploy
 ```
 
+After deploying, check the upload size in the Vercel output. A full-site deploy uploads ~34 MB / ~28,700 files. If the output shows only a few MB (e.g. 4 MB / 3,000 files), the archive was incomplete — the `out/` directory was captured before the postbuild restore finished. Re-run `npm run deploy` immediately to fix it.
+
 Shorthand for the full race workflow (build + deploy):
 ```
 npm run race
