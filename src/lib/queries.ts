@@ -619,7 +619,8 @@ export async function getConstructorChain(id: number): Promise<{ id: number; dis
   const cMap = new Map(allConstructors.map(c => [c.id, c]));
   const yearMap = new Map(yearRanges.map(r => [r.constructorId, { firstYear: r.firstYear, lastYear: r.lastYear }]));
 
-  function parseVals(s: string): number[] {
+  function parseVals(s: string | null): number[] {
+    if (!s) return [0];
     return s.split(',').map(v => parseInt(v.trim(), 10));
   }
 

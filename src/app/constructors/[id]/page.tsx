@@ -52,7 +52,10 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
 
   if (!constructor) notFound();
 
-  // Compute effective year ranges — handles constructors with pre-chain historical entries
+  // Compute effective year ranges for the chain.
+  // Multi-value formedFrom/became means a constructor can appear multiple times (e.g. Arrows → Footwork → Arrows).
+  // We cap each entry's rawEnd at (next entry's rawFirstYear - 1) when the next entry has a later firstYear,
+  // so returning constructors don't bleed their full historical range into the display.
   let prevEnd: number | null = null;
   const chainWithYears = chain.map((row, i) => {
     const isLast = i === chain.length - 1;
@@ -60,8 +63,15 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
       return { ...row, start: null as number | null, end: null as number | "present" | null };
     }
     const start = prevEnd !== null ? Math.max(row.firstYear, prevEnd + 1) : row.firstYear;
-    const end: number | "present" = (isLast && !!row.current) ? "present" : row.lastYear;
-    prevEnd = row.lastYear;
+    let rawEnd = row.lastYear;
+    if (!isLast) {
+      const next = chain[i + 1];
+      if (next.firstYear !== null && next.firstYear > row.firstYear) {
+        rawEnd = Math.min(rawEnd, next.firstYear - 1);
+      }
+    }
+    const end: number | "present" = (isLast && !!row.current) ? "present" : rawEnd;
+    prevEnd = rawEnd;
     return { ...row, start: start as number | null, end: end as number | "present" | null };
   });
 
