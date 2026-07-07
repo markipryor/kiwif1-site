@@ -30,6 +30,42 @@ Shorthand for the full race workflow (build + deploy):
 npm run race
 ```
 
+## Race deploy checklist
+
+After entering race data and before running `npm run race`, update the circuit layout records if the new race set a faster pole or lap time:
+
+```powershell
+& "C:\xampp\mysql\bin\mysql.exe" -u root kiwif1 -e "
+UPDATE circuitlayouts cl
+SET cl.bestPoleTime = (
+  SELECT pt.time FROM poletimes pt
+  JOIN grandsprix gp ON gp.id = pt.grandprix_id
+  WHERE gp.circuitlayout_id = cl.id AND pt.time != ''
+  ORDER BY TIME_TO_SEC(CONCAT('00:', pt.time)) ASC LIMIT 1
+)
+WHERE cl.id = (
+  SELECT gp.circuitlayout_id FROM grandsprix gp
+  WHERE gp.date <= CURDATE() AND gp.circuitlayout_id != 0
+  ORDER BY gp.date DESC LIMIT 1
+);
+
+UPDATE circuitlayouts cl
+SET cl.bestRaceLapTime = (
+  SELECT fl.time FROM fastestlaps fl
+  JOIN grandsprix gp ON gp.id = fl.grandprix_id
+  WHERE gp.circuitlayout_id = cl.id AND fl.time != ''
+  ORDER BY TIME_TO_SEC(CONCAT('00:', fl.time)) ASC LIMIT 1
+)
+WHERE cl.id = (
+  SELECT gp.circuitlayout_id FROM grandsprix gp
+  WHERE gp.date <= CURDATE() AND gp.circuitlayout_id != 0
+  ORDER BY gp.date DESC LIMIT 1
+);
+"
+```
+
+This recalculates both records for the circuit layout of the most recent race. It is idempotent — safe to run every time regardless of whether a new record was set.
+
 ## Committing after builds
 
 After every build **except** backlog-only builds (`npm run build:backlog`), commit all changes to GitHub before or immediately after deploying. Use a concise commit message describing what was rebuilt, e.g. `build: race 2025 Abu Dhabi GP` or `build: driver 397 partial rebuild`.

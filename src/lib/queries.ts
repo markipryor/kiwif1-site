@@ -480,6 +480,7 @@ export async function getConstructorById(id: number): Promise<(Constructor & Con
       c.id, COALESCE(NULLIF(c.name,''), c.shortName) AS name, c.shortName, c.indyOnly, c.current,
       n.adjective AS nationality,
       n.iso2 AS nationalityCode,
+      NULLIF(c.founder, '') AS founder,
       COUNT(DISTINCT r.grandprix_id) AS races,
       SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
       SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
@@ -603,19 +604,24 @@ export async function getConstructorChain(id: number) {
   return query<{ id: number; displayName: string; current: boolean; pos: number; firstYear: number; lastYear: number }>(`
     WITH RECURSIVE
     ancestors AS (
-      SELECT id, formedFrom, became, current FROM constructors WHERE id = ?
+      SELECT id, formedFrom, became, current, CAST(id AS CHAR(500)) AS seen
+      FROM constructors WHERE id = ?
       UNION ALL
-      SELECT c.id, c.formedFrom, c.became, c.current
-      FROM constructors c JOIN ancestors a ON c.id = a.formedFrom AND a.formedFrom > 0
+      SELECT c.id, c.formedFrom, c.became, c.current, CONCAT(a.seen, ',', c.id)
+      FROM constructors c JOIN ancestors a
+        ON c.id = CAST(a.formedFrom AS UNSIGNED) AND CAST(a.formedFrom AS UNSIGNED) > 0
+        AND FIND_IN_SET(c.id, a.seen) = 0
     ),
     chain AS (
       SELECT c.id, COALESCE(NULLIF(c.name,''), c.shortName) AS displayName,
-             c.formedFrom, c.became, c.current, 0 AS pos
-      FROM constructors c JOIN ancestors a ON c.id = a.id AND a.formedFrom = 0
+             c.formedFrom, c.became, c.current, 0 AS pos, CAST(c.id AS CHAR(500)) AS seen
+      FROM constructors c JOIN ancestors a ON c.id = a.id AND CAST(a.formedFrom AS UNSIGNED) = 0
       UNION ALL
       SELECT c.id, COALESCE(NULLIF(c.name,''), c.shortName),
-             c.formedFrom, c.became, c.current, ch.pos + 1
-      FROM constructors c JOIN chain ch ON c.id = ch.became AND ch.became > 0
+             c.formedFrom, c.became, c.current, ch.pos + 1, CONCAT(ch.seen, ',', c.id)
+      FROM constructors c JOIN chain ch
+        ON c.id = CAST(ch.became AS UNSIGNED) AND CAST(ch.became AS UNSIGNED) > 0
+        AND FIND_IN_SET(c.id, ch.seen) = 0
     )
     SELECT ch.id, ch.displayName, ch.current, ch.pos,
            MIN(YEAR(gp.date)) AS firstYear, MAX(YEAR(gp.date)) AS lastYear

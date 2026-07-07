@@ -83,6 +83,9 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
           <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">{constructor.nationality}</p>
         )}
         <h1 className="text-4xl font-bold text-white">{constructor.name}</h1>
+        {constructor.founder && (
+          <p className="text-zinc-500 text-sm mt-1">Founded by {constructor.founder}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">

@@ -31,6 +31,7 @@ export interface Constructor {
   shortName: string;
   nationality: string;
   nationalityCode: string;
+  founder: string | null;
   indyOnly: boolean;
   current: boolean;
 }
