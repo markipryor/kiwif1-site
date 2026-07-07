@@ -91,6 +91,21 @@ if ($free -lt 5) { Write-Warning "Only $([math]::Round($free,1)) GB free — bui
 
 Each timed-out query can leave 4–12 GB of `#sql*.MAD/.MAI` files. Multiple failed builds can accumulate 50–70 GB.
 
+**After killing a build with `Stop-Process -Name node`**, MySQL connections from that build stay alive and hold table locks — they do NOT die with the node process. Any subsequent DDL (`ALTER TABLE`, `CREATE INDEX`) or new build will hang waiting for those locks. Always check and kill stuck connections first:
+```powershell
+& "C:\xampp\mysql\bin\mysql.exe" -u root -e "SELECT Id, Time, LEFT(Info, 80) FROM information_schema.PROCESSLIST WHERE COMMAND != 'Sleep' AND USER != 'system user' AND Id != CONNECTION_ID();"
+# Then kill each Id shown:
+& "C:\xampp\mysql\bin\mysql.exe" -u root -e "KILL <id>;"
+```
+
+## Build parallelism
+
+`next.config.ts` sets `experimental: { cpus: 2 }`. This is intentional — full section rebuilds (constructors, drivers) run heavy aggregate queries and 7 parallel workers create enough DB contention to push every page past the timeout. Keep it at 2. Do not remove or increase this setting.
+
+## Constructor chain query
+
+`getConstructorChain` in `queries.ts` uses a WITH RECURSIVE CTE with `FIND_IN_SET` cycle guards in both the `ancestors` and `chain` CTEs. This is necessary because some constructors "returned" under the same name after becoming a different team (e.g. Sauber → BMW Sauber → Sauber, March → Leyton House → March), creating closed loops in the `formedFrom`/`became` fields. The cycle guards cause the chain to terminate gracefully when a constructor would be revisited. Do not remove them — without them, affected constructor pages hang at the 1000-iteration recursion limit.
+
 ## Versioning
 
 - Version string is in `src/app/layout.tsx` (footer) and in the `deployed[]` array in `src/app/backlog/tasks.ts`.
