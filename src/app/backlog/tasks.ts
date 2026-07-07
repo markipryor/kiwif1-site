@@ -127,6 +127,7 @@ export const sections: Section[] = [
       { id: "KF1-R-02", title: "Additional records",         complexity: "M", status: "pending", description: "Add new record categories: most grand slams (win + pole + fastest lap + led every lap), most race starts without a win, and others." },
       { id: "KF1-R-03", title: "Reformat records page into categories", complexity: "M", status: "done", version: "v6.3.1", description: "Restructure the records page into distinct sections: Most (wins, podiums, poles, fastest laps, points, races), Firsts (first win, first pole, etc.), Oldest/Youngest (oldest winner, youngest champion, etc.). Each section gets its own heading and layout." },
       { id: "KF1-R-04", title: "Indicate current drivers on records lists", complexity: "S", status: "pending", description: "On records list rows (Most tab accordion and full list pages), show a small indicator — e.g. a dot or 'Current' badge — beside drivers who are actively racing in the current season. Requires the 'current' flag from the drivers table to be returned alongside each record row." },
+      { id: "KF1-R-06", title: "Constructor records section", complexity: "M", status: "pending", description: "Add a Constructor records section to the Records page, equivalent to the existing driver records. Include: most wins, most podiums, most poles, most fastest laps, most points, most race starts (entries), most consecutive wins, most consecutive podiums. Use the same accordion/full-list pattern as driver records." },
       { id: "KF1-R-05", title: "Consecutive records: streak status, start, and end race", complexity: "M", status: "pending", description: "Enhance each consecutive record entry to show: (a) whether the streak is still ongoing (current/active), (b) the race where the streak started (with link), and (c) the race where it ended (or a 'Ongoing' label if active). Requires updating getConsecutiveRecords() to return startGpId, startTitle, endGpId, endTitle, and an isOngoing flag alongside the streak length." },
     ],
   },
@@ -191,6 +192,24 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.4.2",
+    changes: [
+      "Constructor pages: Founder displayed below constructor name when set in DB",
+      "Constructor pages: Nationality text shown in header (was missing from constructor detail pages)",
+      "Constructor chain: Cycle guards added to WITH RECURSIVE CTE (FIND_IN_SET) — prevents infinite recursion for returning teams (Sauber, March)",
+      "DB: 10 indexes added to results, entrants, fastestlaps, sprints tables — constructor page query time reduced from 600s+ to seconds",
+      "Backlog: KF1-C-10 (History data for all teams) and KF1-C-13 (Constructor bios) marked done",
+      "Backlog: KF1-C-15 (Fix team histories) and KF1-C-16 (Flag icon on constructor detail page) added",
+    ],
+  },
+  {
+    version: "v6.4.1",
+    changes: [
+      "Race pages: Circuit lap record and pole time record displayed in quick-stats row",
+      "DB: bestPoleTime and bestRaceLapTime columns added to circuitlayouts table",
+    ],
+  },
   {
     version: "v6.4.0",
     changes: [

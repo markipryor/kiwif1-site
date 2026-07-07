@@ -25,12 +25,19 @@ Use `npm run build:<mode>` — this runs `setup-build.js` to set `.build-config.
 npm run deploy
 ```
 
-After deploying, check the upload size in the Vercel output. A full-site deploy uploads ~34 MB / ~28,700 files. If the output shows only a few MB (e.g. 4 MB / 3,000 files), the archive was incomplete — the `out/` directory was captured before the postbuild restore finished. Re-run `npm run deploy` immediately to fix it.
-
 Shorthand for the full race workflow (build + deploy):
 ```
 npm run race
 ```
+
+**After every deploy, verify the upload size** in the Vercel CLI output matches the expected range for the build mode:
+
+| Build mode | Expected upload | Expected files |
+|------------|----------------|----------------|
+| `race`, `full`, `drivers`, `constructors`, `seasons`, `records` | ~34 MB | ~28,700 |
+| `backlog` | ~4–5 MB | ~3,000–3,500 |
+
+If a non-backlog deploy shows only a few MB, the archive was incomplete — the `out/` directory was captured before the postbuild restore finished. Re-run `npm run deploy` immediately. This has been observed to cause entire sections (e.g. all constructor pages) to 404 in production.
 
 ## Race deploy checklist
 
@@ -111,7 +118,8 @@ Each timed-out query can leave 4–12 GB of `#sql*.MAD/.MAI` files. Multiple fai
 ## Versioning
 
 - Version string is in `src/app/layout.tsx` (footer) and in the `deployed[]` array in `src/app/backlog/tasks.ts`.
-- **Always increment the patch number only** (last digit). e.g. `v6.4.0 → v6.4.1`. Never bump the minor or major number.
+- **Always increment the patch number only** (last digit). e.g. `v6.4.1 → v6.4.2`. Never bump the minor or major number.
+- **Every deploy except a backlog-only deploy must increment the version.** Backlog-only builds (`npm run build:backlog`) do not require a version bump. All other builds (race, full, drivers, constructors, seasons, etc.) must bump the version before deploying.
 - Update the footer version only in pages that are already being rebuilt as part of the current task. Never trigger a separate rebuild just to update the version number.
 - Do not rename a version that has already been deployed.
 
