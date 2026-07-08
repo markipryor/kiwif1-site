@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { AgeRow, AgeRecordSet } from "@/lib/queries";
+import type { AgeRow, AgeRecordSet, ConsecRow, ConstructorConsecRow } from "@/lib/queries";
 
 export type { AgeRow, AgeRecordSet };
 
-const TABS = ["Most", "Youngest", "Oldest", "Consecutive", "Other"] as const;
+const TABS = ["Most", "Youngest", "Oldest", "Consecutive", "Constructors", "Other"] as const;
 type Tab = typeof TABS[number];
 
-export type RecordRow = { driverId: number; name: string; value: number };
+export type RecordRow = { driverId: number; name: string; value: number; current?: number };
 export type PointsRow = RecordRow & { pts2026: number };
+export type { ConsecRow, ConstructorConsecRow };
+export type ConstructorRecordRow = { constructorId: number; name: string; value: number; current: number };
 
 export interface RecordsData {
   wins: RecordRow[];
@@ -22,13 +24,27 @@ export interface RecordsData {
 }
 
 export interface ConsecutiveData {
-  wins: RecordRow[];
-  podiums: RecordRow[];
-  poles: RecordRow[];
-  fastestLaps: RecordRow[];
-  points: RecordRow[];
-  finishes: RecordRow[];
-  starts: RecordRow[];
+  wins: ConsecRow[];
+  podiums: ConsecRow[];
+  poles: ConsecRow[];
+  fastestLaps: ConsecRow[];
+  points: ConsecRow[];
+  finishes: ConsecRow[];
+  starts: ConsecRow[];
+}
+
+export interface ConstructorRecordsData {
+  wins: ConstructorRecordRow[];
+  podiums: ConstructorRecordRow[];
+  poles: ConstructorRecordRow[];
+  fastestLaps: ConstructorRecordRow[];
+  points: ConstructorRecordRow[];
+  entries: ConstructorRecordRow[];
+}
+
+export interface ConstructorConsecutiveData {
+  wins: ConstructorConsecRow[];
+  podiums: ConstructorConsecRow[];
 }
 
 export type AgeRecords = {
@@ -47,23 +63,34 @@ function fmtAge(ageDays: number) {
   return `${years}y ${days}d`;
 }
 
-// ─── Most tab components ───────────────────────────────────────────────────────
+// ─── Driver row (Most + Consecutive tabs) ─────────────────────────────────────
 
-function RowItem({ rank, driverId, name, value, max }: {
-  rank: number; driverId: number; name: string; value: number; max: number;
-}) {
+function DriverRowItem({ rank, row, max }: { rank: number; row: RecordRow; max: number }) {
+  const c = row as ConsecRow;
+  const hasConsec = "startGp" in row;
   return (
     <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 flex items-center gap-4">
       <span className="text-zinc-500 text-sm w-5 text-right font-mono shrink-0">{rank}</span>
       <div className="flex-1 min-w-0">
-        <Link href={`/drivers/${driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
-          {name}
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/drivers/${row.driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
+            {row.name}
+          </Link>
+          {!!row.current && (
+            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-medium">Current</span>
+          )}
+          {hasConsec && !!c.isOngoing && (
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">Ongoing</span>
+          )}
+        </div>
+        {hasConsec && c.startGp && c.endGp && (
+          <p className="text-zinc-500 text-xs mt-0.5">{c.startGp} → {c.endGp}</p>
+        )}
         <div className="w-full bg-zinc-700 rounded-full h-1 mt-2">
-          <div className="h-1 rounded-full bg-red-500" style={{ width: `${(value / max) * 100}%` }} />
+          <div className="h-1 rounded-full bg-red-500" style={{ width: `${(row.value / max) * 100}%` }} />
         </div>
       </div>
-      <span className="text-white font-bold text-base w-12 text-right shrink-0">{fmt(value)}</span>
+      <span className="text-white font-bold text-base w-12 text-right shrink-0">{fmt(row.value)}</span>
     </div>
   );
 }
@@ -99,7 +126,7 @@ function RecordSection({ label, rows, slug, isOpen, onToggle }: {
       {isOpen && (
         <div className="bg-zinc-950 border-t border-zinc-800 px-5 py-4 space-y-2">
           {top10.map((r, i) => (
-            <RowItem key={r.driverId} rank={i + 1} driverId={r.driverId} name={r.name} value={Number(r.value)} max={max} />
+            <DriverRowItem key={r.driverId} rank={i + 1} row={r} max={max} />
           ))}
           <div className="pt-3 text-center">
             <Link
@@ -109,6 +136,76 @@ function RecordSection({ label, rows, slug, isOpen, onToggle }: {
               View full list ({rows.length}) →
             </Link>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Constructor row ───────────────────────────────────────────────────────────
+
+function ConstructorRowItem({ rank, row, max }: { rank: number; row: ConstructorRecordRow | ConstructorConsecRow; max: number }) {
+  const c = row as ConstructorConsecRow;
+  const hasConsec = "startGp" in row;
+  return (
+    <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 flex items-center gap-4">
+      <span className="text-zinc-500 text-sm w-5 text-right font-mono shrink-0">{rank}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/constructors/${row.constructorId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
+            {row.name}
+          </Link>
+          {!!row.current && (
+            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-medium">Current</span>
+          )}
+          {hasConsec && !!c.isOngoing && (
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">Ongoing</span>
+          )}
+        </div>
+        {hasConsec && c.startGp && c.endGp && (
+          <p className="text-zinc-500 text-xs mt-0.5">{c.startGp} → {c.endGp}</p>
+        )}
+        <div className="w-full bg-zinc-700 rounded-full h-1 mt-2">
+          <div className="h-1 rounded-full bg-red-500" style={{ width: `${(row.value / max) * 100}%` }} />
+        </div>
+      </div>
+      <span className="text-white font-bold text-base w-12 text-right shrink-0">{fmt(row.value)}</span>
+    </div>
+  );
+}
+
+function ConstructorSection({ label, rows, isOpen, onToggle }: {
+  label: string;
+  rows: (ConstructorRecordRow | ConstructorConsecRow)[];
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const top10 = rows.slice(0, 10);
+  const max = Number(rows[0]?.value ?? 1);
+  const leader = rows[0];
+
+  return (
+    <div className="border border-zinc-800 rounded-xl overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 bg-zinc-900 hover:bg-zinc-800/80 transition-colors text-left"
+      >
+        <div className="flex items-baseline gap-3 min-w-0">
+          <span className="text-white font-semibold">{label}</span>
+          {leader && (
+            <span className="text-zinc-500 text-sm truncate">
+              {leader.name} · {fmt(leader.value)}
+            </span>
+          )}
+        </div>
+        <span className="text-zinc-400 text-xl shrink-0 leading-none">{isOpen ? "−" : "+"}</span>
+      </button>
+
+      {isOpen && (
+        <div className="bg-zinc-950 border-t border-zinc-800 px-5 py-4 space-y-2">
+          {top10.map((r, i) => (
+            <ConstructorRowItem key={`${r.constructorId}-${i}`} rank={i + 1} row={r} max={max} />
+          ))}
         </div>
       )}
     </div>
@@ -186,7 +283,19 @@ function AgeSection({ label, set, isOpen, onToggle }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function RecordsClient({ data, ageRecords, consecutive }: { data: RecordsData; ageRecords: AgeRecords; consecutive: ConsecutiveData }) {
+export default function RecordsClient({
+  data,
+  ageRecords,
+  consecutive,
+  constructorRecords,
+  constructorConsecutive,
+}: {
+  data: RecordsData;
+  ageRecords: AgeRecords;
+  consecutive: ConsecutiveData;
+  constructorRecords: ConstructorRecordsData;
+  constructorConsecutive: ConstructorConsecutiveData;
+}) {
   const [tab, setTab] = useState<Tab>("Most");
   const [open, setOpen] = useState<Set<string>>(new Set());
 
@@ -207,28 +316,39 @@ export default function RecordsClient({ data, ageRecords, consecutive }: { data:
     { label: "Most Race Starts",    rows: data.races,       slug: "race-starts" },
   ];
 
-  const consSections: { label: string; rows: RecordRow[]; slug: string }[] = [
-    { label: "Consecutive Wins",           rows: consecutive.wins,        slug: "cons-wins" },
-    { label: "Consecutive Podiums",        rows: consecutive.podiums,     slug: "cons-podiums" },
-    { label: "Consecutive Pole Positions", rows: consecutive.poles,       slug: "cons-poles" },
-    { label: "Consecutive Fastest Laps",   rows: consecutive.fastestLaps, slug: "cons-fastest-laps" },
-    { label: "Consecutive Points Finishes",rows: consecutive.points,      slug: "cons-points" },
-    { label: "Consecutive Finishes",       rows: consecutive.finishes,    slug: "cons-finishes" },
-    { label: "Consecutive Race Starts",    rows: consecutive.starts,      slug: "cons-starts" },
+  const consSections: { label: string; rows: ConsecRow[]; slug: string }[] = [
+    { label: "Consecutive Wins",            rows: consecutive.wins,        slug: "cons-wins" },
+    { label: "Consecutive Podiums",         rows: consecutive.podiums,     slug: "cons-podiums" },
+    { label: "Consecutive Pole Positions",  rows: consecutive.poles,       slug: "cons-poles" },
+    { label: "Consecutive Fastest Laps",    rows: consecutive.fastestLaps, slug: "cons-fastest-laps" },
+    { label: "Consecutive Points Finishes", rows: consecutive.points,      slug: "cons-points" },
+    { label: "Consecutive Finishes",        rows: consecutive.finishes,    slug: "cons-finishes" },
+    { label: "Consecutive Race Starts",     rows: consecutive.starts,      slug: "cons-starts" },
+  ];
+
+  const constructorSections: { label: string; rows: (ConstructorRecordRow | ConstructorConsecRow)[] }[] = [
+    { label: "Most Constructor Wins",    rows: constructorRecords.wins },
+    { label: "Most Constructor Podiums", rows: constructorRecords.podiums },
+    { label: "Most Pole Positions",      rows: constructorRecords.poles },
+    { label: "Most Fastest Laps",        rows: constructorRecords.fastestLaps },
+    { label: "Most Points",              rows: constructorRecords.points },
+    { label: "Most Race Entries",        rows: constructorRecords.entries },
+    { label: "Consecutive Wins",         rows: constructorConsecutive.wins },
+    { label: "Consecutive Podiums",      rows: constructorConsecutive.podiums },
   ];
 
   const ageSections = (group: AgeRecords["youngest"], prefix: string) => [
-    { label: `${prefix} Race Winner`,      set: group.wins,        id: `${prefix}-wins` },
-    { label: `${prefix} Podium Finisher`,  set: group.podiums,     id: `${prefix}-podiums` },
-    { label: `${prefix} Pole Position`,    set: group.poles,       id: `${prefix}-poles` },
-    { label: `${prefix} Fastest Lap`,      set: group.fastestLaps, id: `${prefix}-fl` },
-    { label: `${prefix} Points Scorer`,    set: group.points,      id: `${prefix}-points` },
-    { label: `${prefix} Race Starter`,     set: group.races,       id: `${prefix}-races` },
+    { label: `${prefix} Race Winner`,     set: group.wins,        id: `${prefix}-wins` },
+    { label: `${prefix} Podium Finisher`, set: group.podiums,     id: `${prefix}-podiums` },
+    { label: `${prefix} Pole Position`,   set: group.poles,       id: `${prefix}-poles` },
+    { label: `${prefix} Fastest Lap`,     set: group.fastestLaps, id: `${prefix}-fl` },
+    { label: `${prefix} Points Scorer`,   set: group.points,      id: `${prefix}-points` },
+    { label: `${prefix} Race Starter`,    set: group.races,       id: `${prefix}-races` },
   ];
 
   return (
     <div>
-      <div className="flex gap-1 mb-8 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
+      <div className="flex flex-wrap gap-1 mb-8 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
         {TABS.map(t => (
           <button
             key={t}
@@ -295,6 +415,20 @@ export default function RecordsClient({ data, ageRecords, consecutive }: { data:
               slug={s.slug}
               isOpen={open.has(s.slug)}
               onToggle={() => toggle(s.slug)}
+            />
+          ))}
+        </div>
+      )}
+
+      {tab === "Constructors" && (
+        <div className="space-y-3">
+          {constructorSections.map((s, i) => (
+            <ConstructorSection
+              key={i}
+              label={s.label}
+              rows={s.rows}
+              isOpen={open.has(`c-${i}`)}
+              onToggle={() => toggle(`c-${i}`)}
             />
           ))}
         </div>

@@ -925,53 +925,69 @@ const POINTS_FILTER = `(
 
 function winsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE r.place='1' AND ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
+      WHERE r2.driver_id=d.id AND r2.place='1')
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 function podiumsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE r.place IN ('1','2','3') AND ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
+      WHERE r2.driver_id=d.id AND r2.place IN ('1','2','3'))
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 function polesAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM poletimes pt JOIN grandsprix gp ON pt.grandprix_id=gp.id
     JOIN results r ON r.grandprix_id=gp.id AND r.grid='1'
     JOIN drivers d ON r.driver_id=d.id
     WHERE ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM poletimes pt2 JOIN grandsprix gp2 ON pt2.grandprix_id=gp2.id
+      JOIN results r2 ON r2.grandprix_id=gp2.id AND r2.grid='1' WHERE r2.driver_id=d.id)
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 function flAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM fastestlaps fl JOIN grandsprix gp ON fl.grandprix_id=gp.id JOIN drivers d ON fl.driver_id=d.id
     WHERE ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM fastestlaps fl2 JOIN grandsprix gp2 ON fl2.grandprix_id=gp2.id
+      WHERE fl2.driver_id=d.id)
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 function ptsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE ${POINTS_FILTER} AND ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
+      WHERE r2.driver_id=d.id AND (
+        (r2.fullPointsDriver=0 AND r2.actualPointsDriver>0)
+        OR (r2.fullPointsDriver=1 AND r2.position BETWEEN 1 AND
+          CASE WHEN YEAR(gp2.date)>=2010 THEN 10 WHEN YEAR(gp2.date)>=2003 THEN 8
+               WHEN YEAR(gp2.date)>=1961 THEN 6 ELSE 5 END)))
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 function startsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
-    ${agg}(TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date)) AS ageDays,
-    DATE_FORMAT(${agg}(gp.date),'%d %b %Y') AS achievedDate, MAX(d.current) AS current
+    TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE ${DOB_FILTER}
-    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth ORDER BY ageDays ${ord} LIMIT 200`;
+    AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
+      WHERE r2.driver_id=d.id)
+    GROUP BY d.id,d.firstName,d.surname,d.dateOfBirth,gp.date,gp.shortTitle ORDER BY ageDays ${ord} LIMIT 200`;
 }
 
 export async function getAgeRecords() {
@@ -1004,37 +1020,37 @@ export async function getAgeRecords() {
 
 export async function getRecords() {
   const [wins, podiums, poles, fastestLaps, points, races] = await Promise.all([
-    query<{ driverId: number; name: string; value: number }>(`
+    query<{ driverId: number; name: string; value: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
-             SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS value
+             SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS value, d.current
       FROM results r JOIN drivers d ON r.driver_id = d.id
       GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
-    query<{ driverId: number; name: string; value: number }>(`
+    query<{ driverId: number; name: string; value: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
-             SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS value
+             SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS value, d.current
       FROM results r JOIN drivers d ON r.driver_id = d.id
       GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
-    query<{ driverId: number; name: string; value: number }>(`
+    query<{ driverId: number; name: string; value: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
-             COUNT(*) AS value
+             COUNT(*) AS value, d.current
       FROM poletimes pt
       JOIN grandsprix gp ON pt.grandprix_id = gp.id
       JOIN results r ON r.grandprix_id = gp.id AND r.grid = '1'
       JOIN drivers d ON r.driver_id = d.id
       GROUP BY d.id ORDER BY value DESC
     `),
-    query<{ driverId: number; name: string; value: number }>(`
+    query<{ driverId: number; name: string; value: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
-             COUNT(*) AS value
+             COUNT(*) AS value, d.current
       FROM fastestlaps fl JOIN drivers d ON fl.driver_id = d.id
       GROUP BY d.id ORDER BY value DESC
     `),
-    query<{ driverId: number; name: string; value: number; pts2026: number }>(`
+    query<{ driverId: number; name: string; value: number; pts2026: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
              SUM(${totalPts()}) AS value,
-             SUM((${racePts2026()}) + (${sprintPts2026()})) AS pts2026
+             SUM((${racePts2026()}) + (${sprintPts2026()})) AS pts2026, d.current
       FROM results r
       JOIN grandsprix gp ON r.grandprix_id = gp.id
       JOIN drivers d ON r.driver_id = d.id
@@ -1042,14 +1058,63 @@ export async function getRecords() {
       LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
       GROUP BY d.id HAVING value > 0 ORDER BY value DESC
     `),
-    query<{ driverId: number; name: string; value: number }>(`
+    query<{ driverId: number; name: string; value: number; current: number }>(`
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
-             COUNT(*) AS value
+             COUNT(*) AS value, d.current
       FROM results r JOIN drivers d ON r.driver_id = d.id
       GROUP BY d.id HAVING value >= 5 ORDER BY value DESC
     `),
   ]);
   return { wins, podiums, poles, fastestLaps, points, races };
+}
+
+export async function getConstructorRecords() {
+  const [wins, podiums, poles, fastestLaps, points, entries] = await Promise.all([
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS value, c.current
+      FROM results r JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      GROUP BY c.id HAVING value > 0 ORDER BY value DESC
+    `),
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS value, c.current
+      FROM results r JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      GROUP BY c.id HAVING value > 0 ORDER BY value DESC
+    `),
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             COUNT(*) AS value, c.current
+      FROM poletimes pt JOIN grandsprix gp ON pt.grandprix_id = gp.id
+      JOIN results r ON r.grandprix_id = gp.id AND r.grid = '1'
+      JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      GROUP BY c.id ORDER BY value DESC
+    `),
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             COUNT(*) AS value, c.current
+      FROM fastestlaps fl
+      JOIN results r ON r.grandprix_id = fl.grandprix_id AND r.driver_id = fl.driver_id
+      JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      GROUP BY c.id ORDER BY value DESC
+    `),
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             SUM(${totalPts()}) AS value, c.current
+      FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      GROUP BY c.id HAVING value > 0 ORDER BY value DESC
+    `),
+    query<{ constructorId: number; name: string; value: number; current: number }>(`
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+             COUNT(DISTINCT r.grandprix_id) AS value, c.current
+      FROM results r JOIN entrants e ON r.entrant_id = e.id JOIN constructors c ON e.constructor_id = c.id
+      GROUP BY c.id HAVING value >= 5 ORDER BY value DESC
+    `),
+  ]);
+  return { wins, podiums, poles, fastestLaps, points, entries };
 }
 
 // ─── Teammate comparisons ──────────────────────────────────────────────────────
@@ -1302,6 +1367,9 @@ export async function getConstructorDriverWdcPositions(constructorId: number): P
 
 // ─── Consecutive streak records ───────────────────────────────────────────────
 
+export type ConsecRow = { driverId: number; name: string; value: number; startGp: string; endGp: string; isOngoing: number; current: number };
+export type ConstructorConsecRow = { constructorId: number; name: string; value: number; startGp: string; endGp: string; isOngoing: number; current: number };
+
 export async function getConsecutiveRecords() {
   const POINTS_FILTER = `(
     (r.fullPointsDriver = 0 AND r.actualPointsDriver > 0)
@@ -1318,6 +1386,7 @@ export async function getConsecutiveRecords() {
         SELECT id AS gp_id, ROW_NUMBER() OVER (ORDER BY date, id) AS global_rn
         FROM grandsprix WHERE date <= CURDATE()
       ),
+      latest_rn AS (SELECT MAX(global_rn) AS max_rn FROM numbered_races),
       driver_Xs AS (${driverSubQ}),
       X_numbered AS (
         SELECT dx.driver_id, nr.global_rn,
@@ -1326,62 +1395,152 @@ export async function getConsecutiveRecords() {
         JOIN numbered_races nr ON nr.gp_id = dx.gp_id
       ),
       streaks AS (
-        SELECT driver_id, global_rn - rn AS island, COUNT(*) AS streak
-        FROM X_numbered
-        GROUP BY driver_id, island
+        SELECT driver_id, global_rn - rn AS island, COUNT(*) AS streak,
+          MIN(global_rn) AS start_rn, MAX(global_rn) AS end_rn
+        FROM X_numbered GROUP BY driver_id, island
         HAVING streak >= ${minStreak}
       ),
       best AS (
-        SELECT driver_id, MAX(streak) AS value
-        FROM streaks
-        GROUP BY driver_id
+        SELECT driver_id, MAX(streak) AS value FROM streaks GROUP BY driver_id
+      ),
+      best_instance AS (
+        SELECT s.driver_id, s.start_rn, s.end_rn, b.value
+        FROM streaks s JOIN best b ON b.driver_id = s.driver_id AND b.value = s.streak
+      ),
+      best_deduped AS (
+        SELECT driver_id, value, MAX(end_rn) AS end_rn FROM best_instance GROUP BY driver_id, value
+      ),
+      best_final AS (
+        SELECT bd.driver_id, bd.value, bd.end_rn, bi.start_rn
+        FROM best_deduped bd
+        JOIN best_instance bi ON bi.driver_id = bd.driver_id AND bi.end_rn = bd.end_rn
       )
-      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name, CAST(b.value AS UNSIGNED) AS value
-      FROM best b
-      JOIN drivers d ON d.id = b.driver_id
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        CAST(bf.value AS UNSIGNED) AS value,
+        CONCAT(YEAR(sg.date),' ',sg.shortTitle) AS startGp,
+        CONCAT(YEAR(eg.date),' ',eg.shortTitle) AS endGp,
+        (bf.end_rn = lg.max_rn) AS isOngoing,
+        d.current
+      FROM best_final bf
+      JOIN drivers d ON d.id = bf.driver_id
+      JOIN numbered_races nr_s ON nr_s.global_rn = bf.start_rn
+      JOIN numbered_races nr_e ON nr_e.global_rn = bf.end_rn
+      JOIN grandsprix sg ON sg.id = nr_s.gp_id
+      JOIN grandsprix eg ON eg.id = nr_e.gp_id
+      CROSS JOIN latest_rn lg
       ORDER BY value DESC, d.surname
     `;
   }
 
   const [wins, podiums, poles, fastestLaps, points, finishes, starts] = await Promise.all([
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT DISTINCT r.driver_id, r.grandprix_id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       WHERE r.place = '1' AND gp.date <= CURDATE()
     `, 3)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT DISTINCT r.driver_id, r.grandprix_id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       WHERE r.place IN ('1','2','3') AND gp.date <= CURDATE()
     `, 3)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT r.driver_id, gp.id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
       WHERE r.grid = '1' AND pt.id IS NOT NULL AND gp.date <= CURDATE()
     `, 3)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT fl.driver_id, fl.grandprix_id AS gp_id
       FROM fastestlaps fl JOIN grandsprix gp ON fl.grandprix_id = gp.id
       WHERE gp.date <= CURDATE()
     `, 3)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT DISTINCT r.driver_id, r.grandprix_id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       WHERE gp.date <= CURDATE() AND ${POINTS_FILTER}
     `, 3)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT DISTINCT r.driver_id, r.grandprix_id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       WHERE gp.date <= CURDATE() AND CAST(r.place AS UNSIGNED) > 0
     `, 10)),
-    query<{ driverId: number; name: string; value: number }>(streakQ(`
+    query<ConsecRow>(streakQ(`
       SELECT DISTINCT r.driver_id, r.grandprix_id AS gp_id
       FROM results r JOIN grandsprix gp ON r.grandprix_id = gp.id
       WHERE gp.date <= CURDATE()
     `, 25)),
   ]);
   return { wins, podiums, poles, fastestLaps, points, finishes, starts };
+}
+
+export async function getConstructorConsecutiveRecords() {
+  function constructorStreakQ(constructorSubQ: string, minStreak: number) {
+    return `
+      WITH numbered_races AS (
+        SELECT id AS gp_id, ROW_NUMBER() OVER (ORDER BY date, id) AS global_rn
+        FROM grandsprix WHERE date <= CURDATE()
+      ),
+      latest_rn AS (SELECT MAX(global_rn) AS max_rn FROM numbered_races),
+      constructor_Xs AS (${constructorSubQ}),
+      X_numbered AS (
+        SELECT cx.constructor_id, nr.global_rn,
+          ROW_NUMBER() OVER (PARTITION BY cx.constructor_id ORDER BY nr.global_rn) AS rn
+        FROM constructor_Xs cx
+        JOIN numbered_races nr ON nr.gp_id = cx.gp_id
+      ),
+      streaks AS (
+        SELECT constructor_id, global_rn - rn AS island, COUNT(*) AS streak,
+          MIN(global_rn) AS start_rn, MAX(global_rn) AS end_rn
+        FROM X_numbered GROUP BY constructor_id, island
+        HAVING streak >= ${minStreak}
+      ),
+      best AS (
+        SELECT constructor_id, MAX(streak) AS value FROM streaks GROUP BY constructor_id
+      ),
+      best_instance AS (
+        SELECT s.constructor_id, s.start_rn, s.end_rn, b.value
+        FROM streaks s JOIN best b ON b.constructor_id = s.constructor_id AND b.value = s.streak
+      ),
+      best_deduped AS (
+        SELECT constructor_id, value, MAX(end_rn) AS end_rn FROM best_instance GROUP BY constructor_id, value
+      ),
+      best_final AS (
+        SELECT bd.constructor_id, bd.value, bd.end_rn, bi.start_rn
+        FROM best_deduped bd
+        JOIN best_instance bi ON bi.constructor_id = bd.constructor_id AND bi.end_rn = bd.end_rn
+      )
+      SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+        CAST(bf.value AS UNSIGNED) AS value,
+        CONCAT(YEAR(sg.date),' ',sg.shortTitle) AS startGp,
+        CONCAT(YEAR(eg.date),' ',eg.shortTitle) AS endGp,
+        (bf.end_rn = lg.max_rn) AS isOngoing,
+        c.current
+      FROM best_final bf
+      JOIN constructors c ON c.id = bf.constructor_id
+      JOIN numbered_races nr_s ON nr_s.global_rn = bf.start_rn
+      JOIN numbered_races nr_e ON nr_e.global_rn = bf.end_rn
+      JOIN grandsprix sg ON sg.id = nr_s.gp_id
+      JOIN grandsprix eg ON eg.id = nr_e.gp_id
+      CROSS JOIN latest_rn lg
+      ORDER BY bf.value DESC, c.name
+    `;
+  }
+
+  const [wins, podiums] = await Promise.all([
+    query<ConstructorConsecRow>(constructorStreakQ(`
+      SELECT DISTINCT e.constructor_id, r.grandprix_id AS gp_id
+      FROM results r JOIN entrants e ON r.entrant_id = e.id
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE r.place = '1' AND gp.date <= CURDATE()
+    `, 2)),
+    query<ConstructorConsecRow>(constructorStreakQ(`
+      SELECT DISTINCT e.constructor_id, r.grandprix_id AS gp_id
+      FROM results r JOIN entrants e ON r.entrant_id = e.id
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE r.place IN ('1','2','3') AND gp.date <= CURDATE()
+    `, 3)),
+  ]);
+  return { wins, podiums };
 }
 
 // ─── Race milestones ──────────────────────────────────────────────────────────
