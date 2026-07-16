@@ -6,8 +6,19 @@
       "Grep",
       "Edit(C:\\Users\\markp\\kiwif1-site\\*)",
       "Write(C:\\Users\\markp\\kiwif1-site\\*)",
-      "PowerShell",
-      "Bash"
+      "Write(C:\\Users\\markp\\.claude\\projects\\C--Users-markp\\memory\\*)",
+      "PowerShell(& \"C:\\xampp\\mysql\\bin\\mysql.exe\" *)",
+      "PowerShell($free *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-PSDrive *)",
+      "PowerShell(Start-Sleep *)",
+      "PowerShell(cd C:\\Users\\markp\\kiwif1-site; npm run *)",
+      "PowerShell(cd C:\\Users\\markp\\kiwif1-site; git *)",
+      "PowerShell(npm run *)",
+      "PowerShell(git *)",
+      "Bash(git *)",
+      "Bash(npm run *)"
     ]
   }
 }

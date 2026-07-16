@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 
-type Row = { driverId: number; name: string; value: number | string; pts2026: number | string };
+type Row = { driverId: number; name: string; value: number | string; pts2026: number | string; current?: number };
 type SortCol = "name" | "value" | "pts2026";
 type SortDir = "asc" | "desc";
 
@@ -15,6 +15,20 @@ function fmt(n: number | string) {
 export default function PointsTable({ rows, showTitle = true }: { rows: Row[]; showTitle?: boolean }) {
   const [sortCol, setSortCol] = useState<SortCol>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const rankMap = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => Number(b.value) - Number(a.value));
+    const map = new Map<number, string>();
+    let currentRank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && Number(sorted[i].value) !== Number(sorted[i - 1].value)) currentRank = i + 1;
+      const isTied =
+        (i > 0 && Number(sorted[i].value) === Number(sorted[i - 1].value)) ||
+        (i < sorted.length - 1 && Number(sorted[i].value) === Number(sorted[i + 1].value));
+      map.set(sorted[i].driverId, isTied ? `=${currentRank}` : String(currentRank));
+    }
+    return map;
+  }, [rows]);
 
   function handleSort(col: SortCol) {
     if (col === sortCol) {
@@ -60,7 +74,7 @@ export default function PointsTable({ rows, showTitle = true }: { rows: Row[]; s
     <div>
       {showTitle && <h2 className="text-lg font-bold text-white mb-4">Most Points</h2>}
       <div className="flex items-center gap-4 px-4 mb-2">
-        <span className="w-5" />
+        <span className="w-8 shrink-0" />
         <ColHeader col="name" label="Driver" className="flex-1 text-left" />
         <ColHeader col="value" label="Historical" className="w-20 text-right" />
         <ColHeader col="pts2026" label="2026 System" className="w-24 text-right" />
@@ -71,14 +85,21 @@ export default function PointsTable({ rows, showTitle = true }: { rows: Row[]; s
             key={r.driverId}
             className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4"
           >
-            <span className="text-zinc-500 text-sm w-5 text-right font-mono">{i + 1}</span>
-            <div className="flex-1">
-              <Link
-                href={`/drivers/${r.driverId}/`}
-                className="text-white font-semibold text-sm hover:text-red-400 transition-colors"
-              >
-                {r.name}
-              </Link>
+            <span className="text-zinc-500 text-sm w-8 text-right font-mono shrink-0">
+              {rankMap.get(r.driverId) ?? String(i + 1)}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/drivers/${r.driverId}/`}
+                  className="text-white font-semibold text-sm hover:text-red-400 transition-colors"
+                >
+                  {r.name}
+                </Link>
+                {!!r.current && (
+                  <span className="text-xs bg-blue-900 text-blue-300 px-1.5 py-0.5 rounded font-medium">Current</span>
+                )}
+              </div>
               <div className="w-full bg-zinc-800 rounded-full h-1 mt-2">
                 <div
                   className="h-1 rounded-full bg-red-500"
@@ -86,8 +107,8 @@ export default function PointsTable({ rows, showTitle = true }: { rows: Row[]; s
                 />
               </div>
             </div>
-            <span className="text-white font-bold text-sm w-20 text-right">{fmt(r.value)}</span>
-            <span className="text-zinc-300 font-semibold text-sm w-24 text-right">{fmt(r.pts2026)}</span>
+            <span className="text-white font-bold text-sm w-20 text-right shrink-0">{fmt(r.value)}</span>
+            <span className="text-zinc-300 font-semibold text-sm w-24 text-right shrink-0">{fmt(r.pts2026)}</span>
           </div>
         ))}
       </div>

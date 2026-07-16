@@ -19,6 +19,53 @@ Use `npm run build:<mode>` — this runs `setup-build.js` to set `.build-config.
 | `backlog` | `npm run build:backlog` | Backlog page only — fast (~28 pages). Use for any change to `tasks.ts` only |
 | `homepage` | `npm run build:homepage` | Home page only |
 
+## Dev server for UI-only changes
+
+For styling, layout, spacing, and component changes where no queries or data logic are changing, use the dev server instead of building:
+
+```powershell
+npm run dev
+```
+
+Requires XAMPP MySQL to be running. Server starts at `http://localhost:3000`.
+
+**How `next dev` differs from a build:**
+- `output: "export"` is ignored — pages render on demand from the DB, no static generation
+- `generateStaticParams` is not called — navigate directly to any URL (e.g. `localhost:3000/races/598/`)
+- Prebuild and postbuild scripts do not run — no backup/restore needed
+- Hot module replacement: component edits appear in the browser immediately (or on refresh)
+- `.build-config.json` is irrelevant — all pages are available on demand
+
+**Workflow:**
+1. Start dev server with `npm run dev`
+2. Make the CSS/component change
+3. Tell the user which URL(s) to check in the browser
+4. Iterate based on visual feedback
+5. Only run a build once the UI is confirmed correct
+
+**When NOT to use dev:**
+- Any change to `queries.ts` (query results look correct in dev but static pages may differ due to missing LEFT JOINs, backup/restore timing, etc.)
+- New pages or new `generateStaticParams` paths
+- Changes to `tasks.ts` (use `build:backlog` instead)
+- Any change that affects data rather than presentation
+
+## Build/deploy: proceed without confirmation
+
+When the user says to build and/or deploy, execute every step of the workflow autonomously — no mid-process questions, no "should I proceed?", no confirmation requests. The entire sequence below is pre-approved:
+
+1. Disk space check
+2. Circuit layout record update (`mysql.exe UPDATE`)
+3. Version bump in `layout.tsx`
+4. Task status update in `tasks.ts`
+5. `npm run build:<mode>` (any mode, retried automatically on failure)
+6. `npm run build:rankings` and/or `npm run build:records` if included
+7. `npm run validate`
+8. `npm run deploy`
+9. `npm run smoke:prod`
+10. `git add` + `git commit` for the build artifacts
+
+If something fails, investigate and fix it, but never stop to ask permission for any of the above steps.
+
 ## Deploy
 
 ```
@@ -38,6 +85,10 @@ npm run race
 | `backlog` | ~4–5 MB | ~3,000–3,500 |
 
 If a non-backlog deploy shows only a few MB, the archive was incomplete — the `out/` directory was captured before the postbuild restore finished. Re-run `npm run deploy` immediately. This has been observed to cause entire sections (e.g. all constructor pages) to 404 in production.
+
+## After every build and deploy
+
+After the smoke test passes, review what was built and deployed. If anything surprised you — a query pattern that caused a bug, a DB schema detail that wasn't obvious, a build/deploy sequence that turned out to matter — write it to CLAUDE.md under the relevant section before ending the session.
 
 ## Race deploy checklist
 
@@ -142,6 +193,14 @@ Each timed-out query can leave 4–12 GB of `#sql*.MAD/.MAI` files. Multiple fai
 
 ## Key query gotchas
 
+**`completed_years` CTE pattern** — `getConstructorSeasonChampInfo` and `getConstructorDriverWdcPositions` both used a `completed_years` CTE (`HAVING MAX(gp.date) < CURDATE()`) to exclude in-progress seasons from championship position data. This is non-obvious from the function signatures. To show live standings for the current in-progress season, remove the `completed_years` CTE and its JOIN references — `constructor_years` already includes the current year via actual results. Applied in v6.4.9.
+
+**MariaDB aggregate expressions in ORDER BY** — MariaDB allows `SUM(CASE WHEN r.place = '2' THEN 1 ELSE 0 END) DESC` directly in ORDER BY without requiring the expression to appear in SELECT. However, this still requires hardcoding each position (1–10 etc.) and can't handle arbitrary depths. For full F1 tiebreaking across all positions, use a second parallel query to fetch `{driverId, place, cnt}` with `r.place REGEXP '^[0-9]+$' AND CAST(r.place AS UNSIGNED) > 0`, build a `Map<driverId, Map<pos, count>>`, then sort in JavaScript iterating `pos = 1..maxPos`.
+
+**`totalPts()` in HAVING requires LEFT JOINs** — `totalPts()` generates a SQL expression referencing `fl` and `s` aliases (fastestlaps and sprints). If used in a HAVING clause (e.g. `HAVING SUM(${totalPts()}) = 0`), the `LEFT JOIN fastestlaps fl` and `LEFT JOIN sprints s` must be present in the FROM clause or the query will fail with "unknown column". Easy to miss when writing new queries that don't otherwise need those joins.
+
+**Grid position filtering** — The `grid` column can contain non-numeric values. When filtering by numeric grid position, always use `r.grid REGEXP '^[0-9]+$' AND CAST(r.grid AS UNSIGNED) > N` rather than bare `r.grid != '1'` or `r.grid > 1`.
+
 **circuitlayout_id=0** — Many races (especially 2022–2024) have `grandsprix.circuitlayout_id = 0`. Always use LEFT JOIN:
 ```sql
 LEFT JOIN circuitlayouts cl ON cl.id = gp.circuitlayout_id AND gp.circuitlayout_id != 0
@@ -165,6 +224,16 @@ LEFT JOIN poletimes pt ON pt.grandprix_id = gp.id
 **Empty `generateStaticParams` arrays** — When `build:race` is run before race results are entered, `setup-build.js` returns 0 drivers and 0 constructors, producing `drivers: [], constructors: []` in `.build-config.json`. `generateStaticParams()` returning `[]` causes: `Error: Page "/constructors/[id]" is missing "generateStaticParams()"`. Fix already applied: all section pages guard with `Array.isArray(spec) && spec.length > 0` before mapping, so an empty array falls through to the seed file instead.
 
 **Performance** — `totalPts()` with sprint/FL joins is ~100× slower than `racePts()`. Complex joins on the seasons list page caused 60s build timeouts. Use `racePts()` for the seasons list winner column; `totalPts()` elsewhere.
+
+**Constructor names** — Many constructors (especially pre-1980, e.g. Brabham/Surtees in 1972) have `name=''` with only `shortName` set. Every query joining to the `constructors` table must use `COALESCE(NULLIF(c.name,''), c.shortName)` — never bare `c.name`. Bare `c.name` produces blank constructor names in standings, race results, and any other output. This has bitten us in multiple queries.
+
+**`??` vs `||` for DB string fields** — `??` only replaces `null`/`undefined`, not empty string `""`. Many older DB rows store `""` rather than NULL (e.g. `grandsprix.fullTitle` is `""` for ~1036 pre-2000s races). Using `race.fullTitle ?? fallback` returns `""` (empty heading), not the fallback. Always use `race.fullTitle || fallback` when the field might contain an empty string. If unsure, query: `SELECT COUNT(*) FROM grandsprix WHERE fullTitle = ''`.
+
+**`gp.shortTitle`** — Contains the location only (e.g. `"Australia"`, `"Monaco"`, `"Germany"`), not the full event name. Append `' Grand Prix'` when constructing display strings, e.g. `CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix')`.
+
+**Multi-section build combining** — When a deploy fixes bugs in two separate sections (e.g. seasons + records), run each build mode in sequence rather than a full rebuild: `build:A` then `build:B`. The second build's prebuild snapshots A's output, rebuilds only B, then restores A's output. The final `out/` contains both fixes. No full rebuild needed.
+
+**Manual `.build-config.json`** — When writing this file via PowerShell, always use `-Encoding ASCII` to avoid the BOM that breaks `JSON.parse` in Node: `Set-Content -Path ".build-config.json" -Value '{"mode":"allraces","races":"all"}' -Encoding ASCII`. To rebuild all races (no `build:races` script exists), write `{"mode":"allraces","races":"all"}` and run `npm run build` directly.
 
 ## Milestone thresholds
 

@@ -131,6 +131,7 @@ export const sections: Section[] = [
       { id: "KF1-R-04", title: "Indicate current drivers on records lists", complexity: "S", status: "done", version: "v6.4.5", description: "On records list rows (Most tab accordion and full list pages), show a small indicator — e.g. a dot or 'Current' badge — beside drivers who are actively racing in the current season. Requires the 'current' flag from the drivers table to be returned alongside each record row." },
       { id: "KF1-R-06", title: "Constructor records section", complexity: "M", status: "done", version: "v6.4.5", description: "Add a Constructor records section to the Records page, equivalent to the existing driver records. Include: most wins, most podiums, most poles, most fastest laps, most points, most race starts (entries), most consecutive wins, most consecutive podiums. Use the same accordion/full-list pattern as driver records." },
       { id: "KF1-R-05", title: "Consecutive records: streak status, start, and end race", complexity: "M", status: "done", version: "v6.4.5", description: "Enhance each consecutive record entry to show: (a) whether the streak is still ongoing (current/active), (b) the race where the streak started (with link), and (c) the race where it ended (or a 'Ongoing' label if active). Requires updating getConsecutiveRecords() to return startGpId, startTitle, endGpId, endTitle, and an isOngoing flag alongside the streak length." },
+      { id: "KF1-R-BUG-01", title: "Bug: Most Points full list page missing Current badge and =N tied ranks", complexity: "S", status: "deployed", version: "v6.4.12", description: "The /records/points/ full list page uses a custom PointsTable component instead of the standard DriverRowItem used by all other record full list pages. As a result it does not render the Current driver badge (added in v6.4.5) or the =N prefix on tied all-time ranks (added in v6.4.7). Fix: update PointsTable (or replace it) to support the current and tied-rank features consistent with other full list pages." },
     ],
   },
   {
@@ -162,7 +163,7 @@ export const sections: Section[] = [
     tasks: [
       { id: "KF1-2026-R07", title: "Enter results: R7 Spanish GP (14 Jun)",        complexity: "S", status: "done",    version: "14 Jun 2026", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Spanish Grand Prix (grandprix id 1156, 14 June 2026)." },
       { id: "KF1-2026-R08", title: "Enter results: R8 Austrian GP (28 Jun)",        complexity: "S", status: "done", version: "1 Jul 2026", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Austrian Grand Prix (grandprix id 1157, 28 June 2026)." },
-      { id: "KF1-2026-R09", title: "Enter results: R9 British GP (5 Jul)",           complexity: "S", status: "deployed", version: "v6.4.11", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 British Grand Prix (grandprix id 1158, 5 July 2026)." },
+      { id: "KF1-2026-R09", title: "Enter results: R9 British GP (5 Jul)",           complexity: "S", status: "done",     version: "v6.4.11", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 British Grand Prix (grandprix id 1158, 5 July 2026)." },
       { id: "KF1-2026-R10", title: "Enter results: R10 Belgian GP (19 Jul)",         complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Belgian Grand Prix (grandprix id 1159, 19 July 2026)." },
       { id: "KF1-2026-R11", title: "Enter results: R11 Hungarian GP (26 Jul)",       complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Hungarian Grand Prix (grandprix id 1160, 26 July 2026)." },
       { id: "KF1-2026-R12", title: "Enter results: R12 Dutch GP (23 Aug)",           complexity: "S", status: "pending", description: "Enter race results, grid positions, fastest lap, and sprint results (if any) for the 2026 Dutch Grand Prix (grandprix id 1161, 23 August 2026)." },
@@ -199,6 +200,12 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.4.12",
+    changes: [
+      "Records: Most Points full list page now shows Current driver badge and =N tied ranks, consistent with all other record list pages (KF1-R-BUG-01)",
+    ],
+  },
   {
     version: "v6.4.11",
     changes: [
