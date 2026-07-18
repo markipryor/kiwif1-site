@@ -41,12 +41,12 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
   if (!driver) notFound();
 
   const stats = [
-    { label: "Races",        value: driver.races,                       rank: ranks.racesRank,                                          recordSlug: "race-starts" },
-    { label: "Wins",         value: driver.wins,                        rank: Number(driver.wins) > 0 ? ranks.winsRank : null,          recordSlug: "wins" },
-    { label: "Podiums",      value: driver.podiums,                     rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null,    recordSlug: "podiums" },
-    { label: "Poles",        value: driver.poles,                       rank: Number(driver.poles) > 0 ? ranks.polesRank : null,        recordSlug: "poles" },
-    { label: "Fastest Laps", value: driver.fastestLaps,                 rank: Number(driver.fastestLaps) > 0 ? ranks.fastestLapsRank : null, recordSlug: "fastest-laps" },
-    { label: "Points",       value: Number(driver.points).toFixed(0),   rank: Number(driver.points) > 0 ? ranks.pointsRank : null,     recordSlug: "points" },
+    { label: "Races",        value: driver.races,                       rank: ranks.racesRank,                                          rankTied: ranks.racesRankTied,        recordSlug: "race-starts" },
+    { label: "Wins",         value: driver.wins,                        rank: Number(driver.wins) > 0 ? ranks.winsRank : null,          rankTied: ranks.winsRankTied,         recordSlug: "wins" },
+    { label: "Podiums",      value: driver.podiums,                     rank: Number(driver.podiums) > 0 ? ranks.podiumsRank : null,    rankTied: ranks.podiumsRankTied,      recordSlug: "podiums" },
+    { label: "Poles",        value: driver.poles,                       rank: Number(driver.poles) > 0 ? ranks.polesRank : null,        rankTied: ranks.polesRankTied,        recordSlug: "poles" },
+    { label: "Fastest Laps", value: driver.fastestLaps,                 rank: Number(driver.fastestLaps) > 0 ? ranks.fastestLapsRank : null, rankTied: ranks.fastestLapsRankTied, recordSlug: "fastest-laps" },
+    { label: "Points",       value: Number(driver.points).toFixed(0),   rank: Number(driver.points) > 0 ? ranks.pointsRank : null,     rankTied: ranks.pointsRankTied,       recordSlug: "points" },
     { label: "Seasons",      value: driver.seasons },
   ];
 
@@ -97,9 +97,9 @@ export default async function DriverPage({ params }: { params: Promise<{ id: str
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
             {"rank" in s && s.rank != null && "recordSlug" in s && s.recordSlug ? (
-              <Link href={`/records/${s.recordSlug}/`} className={`text-xs mt-0.5 block hover:underline ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</Link>
+              <Link href={`/records/${s.recordSlug}/`} className={`text-xs mt-0.5 block hover:underline ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>{"rankTied" in s && s.rankTied ? "=" : "#"}{s.rank} all-time</Link>
             ) : "rank" in s && s.rank != null ? (
-              <p className={`text-xs mt-0.5 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</p>
+              <p className={`text-xs mt-0.5 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>{"rankTied" in s && s.rankTied ? "=" : "#"}{s.rank} all-time</p>
             ) : null}
           </div>
         ))}

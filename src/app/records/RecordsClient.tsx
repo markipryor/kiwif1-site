@@ -47,6 +47,18 @@ export interface ConstructorConsecutiveData {
   podiums: ConstructorConsecRow[];
 }
 
+export interface OtherRecordsData {
+  hatTricks: RecordRow[];
+  startsWithoutWin: RecordRow[];
+  winsFromPole: RecordRow[];
+  winsFromNonPole: RecordRow[];
+  podiumsWithoutWin: RecordRow[];
+  startsWithoutPoints: RecordRow[];
+  dnfs: RecordRow[];
+  constructorsRacedFor: RecordRow[];
+  lowestGridWin: RecordRow[];
+}
+
 export type AgeRecords = {
   youngest: { wins: AgeRecordSet; podiums: AgeRecordSet; poles: AgeRecordSet; fastestLaps: AgeRecordSet; points: AgeRecordSet; races: AgeRecordSet };
   oldest:   { wins: AgeRecordSet; podiums: AgeRecordSet; poles: AgeRecordSet; fastestLaps: AgeRecordSet; points: AgeRecordSet; races: AgeRecordSet };
@@ -57,6 +69,19 @@ function fmt(n: number | string) {
   return v % 1 === 0 ? v.toFixed(0) : v.toString();
 }
 
+function computeRanks(rows: { value: number | string }[]): string[] {
+  const values = rows.map(r => Number(r.value));
+  const ranks: string[] = [];
+  let currentRank = 1;
+  for (let i = 0; i < values.length; i++) {
+    if (i > 0 && values[i] !== values[i - 1]) currentRank = i + 1;
+    ranks.push(currentRank.toString());
+  }
+  const counts = new Map<string, number>();
+  ranks.forEach(r => counts.set(r, (counts.get(r) ?? 0) + 1));
+  return ranks.map(r => (counts.get(r) ?? 0) > 1 ? `=${r}` : r);
+}
+
 function fmtAge(ageDays: number) {
   const years = Math.floor(ageDays / 365);
   const days = ageDays - years * 365;
@@ -65,12 +90,12 @@ function fmtAge(ageDays: number) {
 
 // ─── Driver row (Most + Consecutive tabs) ─────────────────────────────────────
 
-function DriverRowItem({ rank, row, max }: { rank: number; row: RecordRow; max: number }) {
+function DriverRowItem({ rank, row, max }: { rank: string; row: RecordRow; max: number }) {
   const c = row as ConsecRow;
   const hasConsec = "startGp" in row;
   return (
     <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 flex items-center gap-4">
-      <span className="text-zinc-500 text-sm w-5 text-right font-mono shrink-0">{rank}</span>
+      <span className="text-zinc-500 text-sm w-7 text-right font-mono shrink-0">{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/drivers/${row.driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
@@ -125,9 +150,12 @@ function RecordSection({ label, rows, slug, isOpen, onToggle }: {
 
       {isOpen && (
         <div className="bg-zinc-950 border-t border-zinc-800 px-5 py-4 space-y-2">
-          {top10.map((r, i) => (
-            <DriverRowItem key={r.driverId} rank={i + 1} row={r} max={max} />
-          ))}
+          {(() => {
+            const rankStrings = computeRanks(top10);
+            return top10.map((r, i) => (
+              <DriverRowItem key={r.driverId} rank={rankStrings[i]} row={r} max={max} />
+            ));
+          })()}
           <div className="pt-3 text-center">
             <Link
               href={`/records/${slug}/`}
@@ -144,12 +172,12 @@ function RecordSection({ label, rows, slug, isOpen, onToggle }: {
 
 // ─── Constructor row ───────────────────────────────────────────────────────────
 
-function ConstructorRowItem({ rank, row, max }: { rank: number; row: ConstructorRecordRow | ConstructorConsecRow; max: number }) {
+function ConstructorRowItem({ rank, row, max }: { rank: string; row: ConstructorRecordRow | ConstructorConsecRow; max: number }) {
   const c = row as ConstructorConsecRow;
   const hasConsec = "startGp" in row;
   return (
     <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 flex items-center gap-4">
-      <span className="text-zinc-500 text-sm w-5 text-right font-mono shrink-0">{rank}</span>
+      <span className="text-zinc-500 text-sm w-7 text-right font-mono shrink-0">{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/constructors/${row.constructorId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
@@ -174,9 +202,10 @@ function ConstructorRowItem({ rank, row, max }: { rank: number; row: Constructor
   );
 }
 
-function ConstructorSection({ label, rows, isOpen, onToggle }: {
+function ConstructorSection({ label, rows, slug, isOpen, onToggle }: {
   label: string;
   rows: (ConstructorRecordRow | ConstructorConsecRow)[];
+  slug: string;
   isOpen: boolean;
   onToggle: () => void;
 }) {
@@ -203,9 +232,20 @@ function ConstructorSection({ label, rows, isOpen, onToggle }: {
 
       {isOpen && (
         <div className="bg-zinc-950 border-t border-zinc-800 px-5 py-4 space-y-2">
-          {top10.map((r, i) => (
-            <ConstructorRowItem key={`${r.constructorId}-${i}`} rank={i + 1} row={r} max={max} />
-          ))}
+          {(() => {
+            const rankStrings = computeRanks(top10);
+            return top10.map((r, i) => (
+              <ConstructorRowItem key={`${r.constructorId}-${i}`} rank={rankStrings[i]} row={r} max={max} />
+            ));
+          })()}
+          <div className="pt-3 text-center">
+            <Link
+              href={`/records/constructors/${slug}/`}
+              className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+            >
+              View full list ({rows.length}) →
+            </Link>
+          </div>
         </div>
       )}
     </div>
@@ -289,12 +329,14 @@ export default function RecordsClient({
   consecutive,
   constructorRecords,
   constructorConsecutive,
+  otherRecords,
 }: {
   data: RecordsData;
   ageRecords: AgeRecords;
   consecutive: ConsecutiveData;
   constructorRecords: ConstructorRecordsData;
   constructorConsecutive: ConstructorConsecutiveData;
+  otherRecords: OtherRecordsData;
 }) {
   const [tab, setTab] = useState<Tab>("Most");
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -326,15 +368,15 @@ export default function RecordsClient({
     { label: "Consecutive Race Starts",     rows: consecutive.starts,      slug: "cons-starts" },
   ];
 
-  const constructorSections: { label: string; rows: (ConstructorRecordRow | ConstructorConsecRow)[] }[] = [
-    { label: "Most Constructor Wins",    rows: constructorRecords.wins },
-    { label: "Most Constructor Podiums", rows: constructorRecords.podiums },
-    { label: "Most Pole Positions",      rows: constructorRecords.poles },
-    { label: "Most Fastest Laps",        rows: constructorRecords.fastestLaps },
-    { label: "Most Points",              rows: constructorRecords.points },
-    { label: "Most Race Entries",        rows: constructorRecords.entries },
-    { label: "Consecutive Wins",         rows: constructorConsecutive.wins },
-    { label: "Consecutive Podiums",      rows: constructorConsecutive.podiums },
+  const constructorSections: { label: string; rows: (ConstructorRecordRow | ConstructorConsecRow)[]; slug: string }[] = [
+    { label: "Most Constructor Wins",    rows: constructorRecords.wins,        slug: "wins" },
+    { label: "Most Constructor Podiums", rows: constructorRecords.podiums,     slug: "podiums" },
+    { label: "Most Pole Positions",      rows: constructorRecords.poles,       slug: "poles" },
+    { label: "Most Fastest Laps",        rows: constructorRecords.fastestLaps, slug: "fastest-laps" },
+    { label: "Most Points",              rows: constructorRecords.points,      slug: "points" },
+    { label: "Most Race Entries",        rows: constructorRecords.entries,     slug: "entries" },
+    { label: "Consecutive Wins",         rows: constructorConsecutive.wins,    slug: "cons-wins" },
+    { label: "Consecutive Podiums",      rows: constructorConsecutive.podiums, slug: "cons-podiums" },
   ];
 
   const ageSections = (group: AgeRecords["youngest"], prefix: string) => [
@@ -424,19 +466,28 @@ export default function RecordsClient({
         <div className="space-y-3">
           {constructorSections.map((s, i) => (
             <ConstructorSection
-              key={i}
+              key={s.slug}
               label={s.label}
               rows={s.rows}
-              isOpen={open.has(`c-${i}`)}
-              onToggle={() => toggle(`c-${i}`)}
+              slug={s.slug}
+              isOpen={open.has(`c-${s.slug}`)}
+              onToggle={() => toggle(`c-${s.slug}`)}
             />
           ))}
         </div>
       )}
 
       {tab === "Other" && (
-        <div className="text-center py-20">
-          <p className="text-zinc-600 text-sm">Coming soon</p>
+        <div className="space-y-3">
+          <RecordSection label="Most Hat-Tricks (Win, Pole & Fastest Lap)" rows={otherRecords.hatTricks} slug="hat-tricks" isOpen={open.has("hat-tricks")} onToggle={() => toggle("hat-tricks")} />
+          <RecordSection label="Most Wins from Pole Position" rows={otherRecords.winsFromPole} slug="wins-from-pole" isOpen={open.has("wins-from-pole")} onToggle={() => toggle("wins-from-pole")} />
+          <RecordSection label="Most Wins from Non-Pole" rows={otherRecords.winsFromNonPole} slug="wins-from-non-pole" isOpen={open.has("wins-from-non-pole")} onToggle={() => toggle("wins-from-non-pole")} />
+          <RecordSection label="Most Podiums Without a Win" rows={otherRecords.podiumsWithoutWin} slug="podiums-without-win" isOpen={open.has("podiums-without-win")} onToggle={() => toggle("podiums-without-win")} />
+          <RecordSection label="Most Starts Without a Win" rows={otherRecords.startsWithoutWin} slug="starts-without-win" isOpen={open.has("starts-without-win")} onToggle={() => toggle("starts-without-win")} />
+          <RecordSection label="Most Starts Without Scoring a Point" rows={otherRecords.startsWithoutPoints} slug="starts-without-points" isOpen={open.has("starts-without-points")} onToggle={() => toggle("starts-without-points")} />
+          <RecordSection label="Most DNFs" rows={otherRecords.dnfs} slug="most-dnfs" isOpen={open.has("most-dnfs")} onToggle={() => toggle("most-dnfs")} />
+          <RecordSection label="Most Constructors Raced For" rows={otherRecords.constructorsRacedFor} slug="constructors-raced-for" isOpen={open.has("constructors-raced-for")} onToggle={() => toggle("constructors-raced-for")} />
+          <RecordSection label="Lowest Starting Position for a Race Win" rows={otherRecords.lowestGridWin} slug="lowest-grid-win" isOpen={open.has("lowest-grid-win")} onToggle={() => toggle("lowest-grid-win")} />
         </div>
       )}
     </div>

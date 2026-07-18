@@ -224,12 +224,16 @@ export async function getDriverSeasonPositions(driverId: number): Promise<{ year
 
 // ─── Driver ranks & race results ──────────────────────────────────────────────
 
-type DriverRanks = { racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
+type DriverRanks = {
+  racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number;
+  racesRankTied: boolean; winsRankTied: boolean; podiumsRankTied: boolean; pointsRankTied: boolean; polesRankTied: boolean; fastestLapsRankTied: boolean;
+};
 let _ranksCache: Map<number, DriverRanks> | null = null;
 
 async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
   if (_ranksCache) return _ranksCache;
-  const rows = await query<{ driver_id: number } & DriverRanks>(`
+  type RankRow = { driver_id: number; racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; fastestLapsRank: number; polesRank: number };
+  const rows = await query<RankRow>(`
     WITH driver_totals AS (
       SELECT
         r.driver_id,
@@ -256,13 +260,25 @@ async function _getAllDriverRanks(): Promise<Map<number, DriverRanks>> {
       CAST(RANK() OVER (ORDER BY poles DESC) AS UNSIGNED) AS polesRank
     FROM driver_totals
   `);
-  _ranksCache = new Map(rows.map((r) => [r.driver_id, { racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank, pointsRank: r.pointsRank, polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank }]));
+  const rankKeys = ['racesRank','winsRank','podiumsRank','pointsRank','polesRank','fastestLapsRank'] as const;
+  const counts = Object.fromEntries(rankKeys.map(k => [k, new Map<number, number>()])) as Record<typeof rankKeys[number], Map<number, number>>;
+  for (const r of rows) { for (const k of rankKeys) counts[k].set(r[k], (counts[k].get(r[k]) ?? 0) + 1); }
+  _ranksCache = new Map(rows.map(r => [r.driver_id, {
+    racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank,
+    pointsRank: r.pointsRank, polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank,
+    racesRankTied: (counts.racesRank.get(r.racesRank) ?? 0) > 1,
+    winsRankTied: (counts.winsRank.get(r.winsRank) ?? 0) > 1,
+    podiumsRankTied: (counts.podiumsRank.get(r.podiumsRank) ?? 0) > 1,
+    pointsRankTied: (counts.pointsRank.get(r.pointsRank) ?? 0) > 1,
+    polesRankTied: (counts.polesRank.get(r.polesRank) ?? 0) > 1,
+    fastestLapsRankTied: (counts.fastestLapsRank.get(r.fastestLapsRank) ?? 0) > 1,
+  }]));
   return _ranksCache;
 }
 
 export async function getDriverRanks(driverId: number): Promise<DriverRanks> {
   const cache = await _getAllDriverRanks();
-  return cache.get(driverId) ?? { racesRank: 0, winsRank: 0, podiumsRank: 0, pointsRank: 0, polesRank: 0, fastestLapsRank: 0 };
+  return cache.get(driverId) ?? { racesRank: 0, winsRank: 0, podiumsRank: 0, pointsRank: 0, polesRank: 0, fastestLapsRank: 0, racesRankTied: false, winsRankTied: false, podiumsRankTied: false, pointsRankTied: false, polesRankTied: false, fastestLapsRankTied: false };
 }
 
 export async function getDriverRaceResults(driverId: number): Promise<{
@@ -558,12 +574,16 @@ export async function getConstructorSeasonDrivers(constructorId: number) {
   `, [constructorId]);
 }
 
-type ConstructorRanks = { racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
+type ConstructorRanks = {
+  racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number;
+  racesRankTied: boolean; winsRankTied: boolean; podiumsRankTied: boolean; pointsRankTied: boolean; polesRankTied: boolean; fastestLapsRankTied: boolean;
+};
 let _constructorRanksCache: Map<number, ConstructorRanks> | null = null;
 
 async function _getAllConstructorRanks(): Promise<Map<number, ConstructorRanks>> {
   if (_constructorRanksCache) return _constructorRanksCache;
-  const rows = await query<{ constructor_id: number } & ConstructorRanks>(`
+  type CRankRow = { constructor_id: number; racesRank: number; winsRank: number; podiumsRank: number; pointsRank: number; polesRank: number; fastestLapsRank: number };
+  const rows = await query<CRankRow>(`
     WITH totals AS (
       SELECT e.constructor_id,
         COUNT(DISTINCT r.grandprix_id) AS races,
@@ -588,9 +608,18 @@ async function _getAllConstructorRanks(): Promise<Map<number, ConstructorRanks>>
       CAST(RANK() OVER (ORDER BY fastestLaps DESC) AS UNSIGNED) AS fastestLapsRank
     FROM totals
   `);
-  _constructorRanksCache = new Map(rows.map((r) => [r.constructor_id, {
-    racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank, pointsRank: r.pointsRank,
-    polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank,
+  const rankKeys = ['racesRank','winsRank','podiumsRank','pointsRank','polesRank','fastestLapsRank'] as const;
+  const counts = Object.fromEntries(rankKeys.map(k => [k, new Map<number, number>()])) as Record<typeof rankKeys[number], Map<number, number>>;
+  for (const r of rows) { for (const k of rankKeys) counts[k].set(r[k], (counts[k].get(r[k]) ?? 0) + 1); }
+  _constructorRanksCache = new Map(rows.map(r => [r.constructor_id, {
+    racesRank: r.racesRank, winsRank: r.winsRank, podiumsRank: r.podiumsRank,
+    pointsRank: r.pointsRank, polesRank: r.polesRank, fastestLapsRank: r.fastestLapsRank,
+    racesRankTied: (counts.racesRank.get(r.racesRank) ?? 0) > 1,
+    winsRankTied: (counts.winsRank.get(r.winsRank) ?? 0) > 1,
+    podiumsRankTied: (counts.podiumsRank.get(r.podiumsRank) ?? 0) > 1,
+    pointsRankTied: (counts.pointsRank.get(r.pointsRank) ?? 0) > 1,
+    polesRankTied: (counts.polesRank.get(r.polesRank) ?? 0) > 1,
+    fastestLapsRankTied: (counts.fastestLapsRank.get(r.fastestLapsRank) ?? 0) > 1,
   }]));
   return _constructorRanksCache;
 }
@@ -677,6 +706,7 @@ export async function getRaceById(id: number): Promise<Race | null> {
       gp.id, gp.date, gp.shortTitle, gp.fullTitle, gp.laps, gp.sprint,
       COALESCE(ci.name, '') AS circuit, COALESCE(ci.city, '') AS circuitCity,
       COALESCE(n.adjective, '') AS country,
+      n.iso2 AS countryCode,
       cl.bestPoleTime, cl.bestRaceLapTime
     FROM grandsprix gp
     LEFT JOIN circuitlayouts cl ON cl.id = gp.circuitlayout_id AND gp.circuitlayout_id != 0
@@ -693,13 +723,15 @@ export async function getRaceResults(raceId: number): Promise<RaceResult[]> {
       r.position, r.place, r.grid,
       d.id AS driverId,
       CONCAT(d.firstName, ' ', d.surname) AS driverName,
-      c.name AS constructor,
+      n.iso2 AS nationalityCode,
+      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
       c.id AS constructorId,
       r.time,
       ((${racePts()}) + (${flBonus()})) AS points
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     JOIN drivers d ON r.driver_id = d.id
+    LEFT JOIN nationalities n ON d.nationality_id = n.id
     JOIN entrants e ON r.entrant_id = e.id
     JOIN constructors c ON e.constructor_id = c.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
@@ -730,7 +762,7 @@ export async function getRaceSprintResults(raceId: number) {
     SELECT
       s.place,
       CONCAT(d.firstName, ' ', d.surname) AS driverName,
-      c.name AS constructor,
+      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
       s.time,
       ${sprintPts("s", "gp")} AS points
     FROM sprints s
@@ -842,7 +874,7 @@ export async function getSeasonRaceWinners(year: number) {
       d.id AS driverId,
       CONCAT(d.firstName, ' ', d.surname) AS driverName,
       c.id AS constructorId,
-      c.name AS constructor
+      COALESCE(NULLIF(c.name,''), c.shortName) AS constructor
     FROM results r
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     JOIN drivers d ON r.driver_id = d.id
@@ -854,49 +886,108 @@ export async function getSeasonRaceWinners(year: number) {
 }
 
 export async function getSeasonDriverStandings(year: number): Promise<SeasonStanding[]> {
-  const rows = await query<Omit<SeasonStanding, "pos">>(`
-    SELECT
-      d.id AS driverId,
-      CONCAT(d.firstName, ' ', d.surname) AS name,
-      c.name AS constructor,
-      c.id AS constructorId,
-      SUM(${totalPts()}) AS points,
-      SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
-      SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
-      COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
-      COUNT(fl.grandprix_id) AS fastestLaps
-    FROM results r
-    JOIN grandsprix gp ON r.grandprix_id = gp.id
-    JOIN drivers d ON r.driver_id = d.id
-    JOIN entrants e ON r.entrant_id = e.id
-    JOIN constructors c ON e.constructor_id = c.id
-    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
-    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
-    WHERE YEAR(gp.date) = ?
-    GROUP BY d.id, c.id
-    ORDER BY points DESC, wins DESC
-  `, [year]);
-  return rows.map((r, i) => ({ pos: i + 1, ...r }));
+  const [rows, dist] = await Promise.all([
+    query<Omit<SeasonStanding, "pos">>(`
+      SELECT
+        d.id AS driverId,
+        CONCAT(d.firstName, ' ', d.surname) AS name,
+        COALESCE(NULLIF(c.name,''), c.shortName) AS constructor,
+        c.id AS constructorId,
+        SUM(${totalPts()}) AS points,
+        SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN r.place IN ('1','2','3') THEN 1 ELSE 0 END) AS podiums,
+        COUNT(DISTINCT CASE WHEN r.grid = '1' THEN r.grandprix_id END) AS poles,
+        COUNT(fl.grandprix_id) AS fastestLaps
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      JOIN entrants e ON r.entrant_id = e.id
+      JOIN constructors c ON e.constructor_id = c.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      WHERE YEAR(gp.date) = ?
+      GROUP BY d.id, c.id
+    `, [year]),
+    query<{ driverId: number; place: number; cnt: number }>(`
+      SELECT r.driver_id AS driverId, CAST(r.place AS UNSIGNED) AS place, COUNT(*) AS cnt
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE YEAR(gp.date) = ? AND r.place REGEXP '^[0-9]+$' AND CAST(r.place AS UNSIGNED) > 0
+      GROUP BY r.driver_id, CAST(r.place AS UNSIGNED)
+    `, [year]),
+  ]);
+
+  const placeDist = new Map<number, Map<number, number>>();
+  for (const { driverId, place, cnt } of dist) {
+    if (!placeDist.has(driverId)) placeDist.set(driverId, new Map());
+    placeDist.get(driverId)!.set(place, cnt);
+  }
+  let maxPos = 0;
+  for (const r of dist) { if (r.place > maxPos) maxPos = r.place; }
+
+  const sorted = [...rows].sort((a, b) => {
+    const ptsDiff = Number(b.points) - Number(a.points);
+    if (ptsDiff !== 0) return ptsDiff;
+    const da = placeDist.get(a.driverId) ?? new Map<number, number>();
+    const db = placeDist.get(b.driverId) ?? new Map<number, number>();
+    for (let pos = 1; pos <= maxPos; pos++) {
+      const diff = (db.get(pos) ?? 0) - (da.get(pos) ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  return sorted.map((r, i) => ({ pos: i + 1, ...r }));
 }
 
 export async function getSeasonConstructorStandings(year: number): Promise<ConstructorStanding[]> {
-  const rows = await query<Omit<ConstructorStanding, "pos">>(`
-    SELECT
-      c.id AS constructorId,
-      c.name AS name,
-      SUM(${totalPts()}) AS points,
-      SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins
-    FROM results r
-    JOIN grandsprix gp ON r.grandprix_id = gp.id
-    JOIN entrants e ON r.entrant_id = e.id
-    JOIN constructors c ON e.constructor_id = c.id
-    LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
-    LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
-    WHERE YEAR(gp.date) = ?
-    GROUP BY c.id
-    ORDER BY points DESC, wins DESC
-  `, [year]);
-  return rows.map((r, i) => ({ pos: i + 1, ...r }));
+  const [rows, dist] = await Promise.all([
+    query<Omit<ConstructorStanding, "pos">>(`
+      SELECT
+        c.id AS constructorId,
+        COALESCE(NULLIF(c.name,''), c.shortName) AS name,
+        SUM(${totalPts()}) AS points,
+        SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) AS wins
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN entrants e ON r.entrant_id = e.id
+      JOIN constructors c ON e.constructor_id = c.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      WHERE YEAR(gp.date) = ?
+      GROUP BY c.id
+    `, [year]),
+    query<{ constructorId: number; place: number; cnt: number }>(`
+      SELECT e.constructor_id AS constructorId, CAST(r.place AS UNSIGNED) AS place, COUNT(*) AS cnt
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN entrants e ON r.entrant_id = e.id
+      WHERE YEAR(gp.date) = ? AND r.place REGEXP '^[0-9]+$' AND CAST(r.place AS UNSIGNED) > 0
+      GROUP BY e.constructor_id, CAST(r.place AS UNSIGNED)
+    `, [year]),
+  ]);
+
+  const placeDist = new Map<number, Map<number, number>>();
+  for (const { constructorId, place, cnt } of dist) {
+    if (!placeDist.has(constructorId)) placeDist.set(constructorId, new Map());
+    placeDist.get(constructorId)!.set(place, cnt);
+  }
+  let maxPos = 0;
+  for (const r of dist) { if (r.place > maxPos) maxPos = r.place; }
+
+  const sorted = [...rows].sort((a, b) => {
+    const ptsDiff = Number(b.points) - Number(a.points);
+    if (ptsDiff !== 0) return ptsDiff;
+    const da = placeDist.get(a.constructorId) ?? new Map<number, number>();
+    const db = placeDist.get(b.constructorId) ?? new Map<number, number>();
+    for (let pos = 1; pos <= maxPos; pos++) {
+      const diff = (db.get(pos) ?? 0) - (da.get(pos) ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  return sorted.map((r, i) => ({ pos: i + 1, ...r }));
 }
 
 // ─── Records ──────────────────────────────────────────────────────────────────
@@ -926,7 +1017,7 @@ const POINTS_FILTER = `(
 function winsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE r.place='1' AND ${DOB_FILTER}
     AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
@@ -936,7 +1027,7 @@ function winsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
 function podiumsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE r.place IN ('1','2','3') AND ${DOB_FILTER}
     AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
@@ -946,7 +1037,7 @@ function podiumsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
 function polesAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM poletimes pt JOIN grandsprix gp ON pt.grandprix_id=gp.id
     JOIN results r ON r.grandprix_id=gp.id AND r.grid='1'
     JOIN drivers d ON r.driver_id=d.id
@@ -958,7 +1049,7 @@ function polesAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
 function flAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM fastestlaps fl JOIN grandsprix gp ON fl.grandprix_id=gp.id JOIN drivers d ON fl.driver_id=d.id
     WHERE ${DOB_FILTER}
     AND gp.date=(SELECT ${agg}(gp2.date) FROM fastestlaps fl2 JOIN grandsprix gp2 ON fl2.grandprix_id=gp2.id
@@ -968,7 +1059,7 @@ function flAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
 function ptsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE ${POINTS_FILTER} AND ${DOB_FILTER}
     AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
@@ -982,7 +1073,7 @@ function ptsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
 function startsAgeQ(agg: 'MIN' | 'MAX', ord: 'ASC' | 'DESC') {
   return `SELECT d.id AS driverId, CONCAT(d.firstName,' ',d.surname) AS name,
     TIMESTAMPDIFF(DAY,d.dateOfBirth,gp.date) AS ageDays,
-    CONCAT(YEAR(gp.date),' ',gp.shortTitle) AS achievedDate, d.current
+    CONCAT(YEAR(gp.date),' ',gp.shortTitle,' Grand Prix') AS achievedDate, d.current
     FROM results r JOIN grandsprix gp ON r.grandprix_id=gp.id JOIN drivers d ON r.driver_id=d.id
     WHERE ${DOB_FILTER}
     AND gp.date=(SELECT ${agg}(gp2.date) FROM results r2 JOIN grandsprix gp2 ON r2.grandprix_id=gp2.id
@@ -1217,13 +1308,7 @@ export async function getConstructorSeasonChampInfo(constructorId: number): Prom
 }[]> {
   const tp = totalPts();
   return query<{ year: number; wccPos: number | null; bestDriverWdcPos: number | null }>(`
-    WITH completed_years AS (
-      SELECT DISTINCT YEAR(gp.date) AS year
-      FROM grandsprix gp
-      GROUP BY YEAR(gp.date)
-      HAVING MAX(gp.date) < CURDATE()
-    ),
-    constructor_years AS (
+    WITH constructor_years AS (
       SELECT DISTINCT YEAR(gp.date) AS year
       FROM entrants e
       JOIN results r ON r.entrant_id = e.id
@@ -1235,7 +1320,6 @@ export async function getConstructorSeasonChampInfo(constructorId: number): Prom
       FROM results r
       JOIN grandsprix gp ON r.grandprix_id = gp.id
       JOIN entrants e ON r.entrant_id = e.id
-      JOIN completed_years cy ON YEAR(gp.date) = cy.year
       JOIN constructor_years cty ON YEAR(gp.date) = cty.year
       LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
       LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
@@ -1251,7 +1335,6 @@ export async function getConstructorSeasonChampInfo(constructorId: number): Prom
       SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${tp}) AS pts
       FROM results r
       JOIN grandsprix gp ON r.grandprix_id = gp.id
-      JOIN completed_years cy ON YEAR(gp.date) = cy.year
       JOIN constructor_years cty ON YEAR(gp.date) = cty.year
       LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
       LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
@@ -1331,38 +1414,228 @@ export async function getAdjacentRaces(raceId: number): Promise<{
 export async function getConstructorDriverWdcPositions(constructorId: number): Promise<{
   year: number; driverId: number; wdcPos: number;
 }[]> {
-  return query<{ year: number; driverId: number; wdcPos: number }>(`
-    WITH completed_years AS (
-      SELECT DISTINCT YEAR(gp.date) AS year
-      FROM grandsprix gp
-      GROUP BY YEAR(gp.date)
-      HAVING MAX(gp.date) < CURDATE()
-    ),
-    constructor_drivers AS (
-      SELECT DISTINCT YEAR(gp.date) AS year, r.driver_id
+  const [ptRows, distRows, constrDriverRows] = await Promise.all([
+    query<{ year: number; driverId: number; pts: number }>(`
+      WITH constructor_years AS (
+        SELECT DISTINCT YEAR(gp.date) AS year
+        FROM entrants e
+        JOIN results r ON r.entrant_id = e.id
+        JOIN grandsprix gp ON r.grandprix_id = gp.id
+        WHERE e.constructor_id = ?
+      )
+      SELECT YEAR(gp.date) AS year, r.driver_id AS driverId, SUM(${racePts()}) AS pts
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE YEAR(gp.date) IN (SELECT year FROM constructor_years)
+      GROUP BY year, r.driver_id
+    `, [constructorId]),
+    query<{ year: number; driverId: number; place: number; cnt: number }>(`
+      WITH constructor_years AS (
+        SELECT DISTINCT YEAR(gp.date) AS year
+        FROM entrants e
+        JOIN results r ON r.entrant_id = e.id
+        JOIN grandsprix gp ON r.grandprix_id = gp.id
+        WHERE e.constructor_id = ?
+      )
+      SELECT YEAR(gp.date) AS year, r.driver_id AS driverId,
+        CAST(r.place AS UNSIGNED) AS place, COUNT(*) AS cnt
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      WHERE YEAR(gp.date) IN (SELECT year FROM constructor_years)
+        AND r.place REGEXP '^[0-9]+$' AND CAST(r.place AS UNSIGNED) > 0
+      GROUP BY year, driverId, place
+    `, [constructorId]),
+    query<{ year: number; driverId: number }>(`
+      SELECT DISTINCT YEAR(gp.date) AS year, r.driver_id AS driverId
       FROM entrants e
       JOIN results r ON r.entrant_id = e.id
       JOIN grandsprix gp ON r.grandprix_id = gp.id
-      JOIN completed_years cy ON YEAR(gp.date) = cy.year
       WHERE e.constructor_id = ?
-    ),
-    wdc_totals AS (
-      SELECT YEAR(gp.date) AS year, r.driver_id, SUM(${racePts()}) AS pts
+    `, [constructorId]),
+  ]);
+
+  const placeDist = new Map<number, Map<number, Map<number, number>>>();
+  for (const { year, driverId, place, cnt } of distRows) {
+    if (!placeDist.has(year)) placeDist.set(year, new Map());
+    const yd = placeDist.get(year)!;
+    if (!yd.has(driverId)) yd.set(driverId, new Map());
+    yd.get(driverId)!.set(place, cnt);
+  }
+  let maxPos = 0;
+  for (const r of distRows) { if (r.place > maxPos) maxPos = r.place; }
+
+  const constrDriverSet = new Map<number, Set<number>>();
+  for (const { year, driverId } of constrDriverRows) {
+    if (!constrDriverSet.has(year)) constrDriverSet.set(year, new Set());
+    constrDriverSet.get(year)!.add(driverId);
+  }
+
+  const ptsByYear = new Map<number, { driverId: number; pts: number }[]>();
+  for (const row of ptRows) {
+    if (!ptsByYear.has(row.year)) ptsByYear.set(row.year, []);
+    ptsByYear.get(row.year)!.push({ driverId: row.driverId, pts: Number(row.pts) });
+  }
+
+  const result: { year: number; driverId: number; wdcPos: number }[] = [];
+
+  for (const [year, drivers] of ptsByYear) {
+    const yd = placeDist.get(year) ?? new Map<number, Map<number, number>>();
+    const sorted = [...drivers].sort((a, b) => {
+      const ptsDiff = b.pts - a.pts;
+      if (ptsDiff !== 0) return ptsDiff;
+      const da = yd.get(a.driverId) ?? new Map<number, number>();
+      const db = yd.get(b.driverId) ?? new Map<number, number>();
+      for (let pos = 1; pos <= maxPos; pos++) {
+        const diff = (db.get(pos) ?? 0) - (da.get(pos) ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return 0;
+    });
+
+    let rank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0) {
+        const prev = sorted[i - 1];
+        const curr = sorted[i];
+        const ptsDiff = curr.pts - prev.pts;
+        const tied = ptsDiff === 0 && (() => {
+          const da = yd.get(curr.driverId) ?? new Map<number, number>();
+          const db = yd.get(prev.driverId) ?? new Map<number, number>();
+          for (let pos = 1; pos <= maxPos; pos++) {
+            if ((da.get(pos) ?? 0) !== (db.get(pos) ?? 0)) return false;
+          }
+          return true;
+        })();
+        if (!tied) rank = i + 1;
+      }
+      if (constrDriverSet.get(year)?.has(sorted[i].driverId)) {
+        result.push({ year, driverId: sorted[i].driverId, wdcPos: rank });
+      }
+    }
+  }
+
+  return result.sort((a, b) => b.year - a.year || a.wdcPos - b.wdcPos);
+}
+
+// ─── Other records ────────────────────────────────────────────────────────────
+
+export async function getOtherRecords(): Promise<{
+  hatTricks: { driverId: number; name: string; value: number; current: number }[];
+  startsWithoutWin: { driverId: number; name: string; value: number; current: number }[];
+  winsFromPole: { driverId: number; name: string; value: number; current: number }[];
+  winsFromNonPole: { driverId: number; name: string; value: number; current: number }[];
+  podiumsWithoutWin: { driverId: number; name: string; value: number; current: number }[];
+  startsWithoutPoints: { driverId: number; name: string; value: number; current: number }[];
+  dnfs: { driverId: number; name: string; value: number; current: number }[];
+  constructorsRacedFor: { driverId: number; name: string; value: number; current: number }[];
+  lowestGridWin: { driverId: number; name: string; value: number; current: number }[];
+}> {
+  const [hatTricks, startsWithoutWin, winsFromPole, winsFromNonPole, podiumsWithoutWin, startsWithoutPoints, dnfs, constructorsRacedFor, lowestGridWin] = await Promise.all([
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(*) AS value, d.current
       FROM results r
       JOIN grandsprix gp ON r.grandprix_id = gp.id
-      WHERE YEAR(gp.date) IN (SELECT DISTINCT year FROM constructor_drivers)
-      GROUP BY YEAR(gp.date), r.driver_id
-    ),
-    wdc_ranked AS (
-      SELECT year, driver_id,
-        CAST(RANK() OVER (PARTITION BY year ORDER BY pts DESC) AS UNSIGNED) AS wdcPos
-      FROM wdc_totals
-    )
-    SELECT cd.year, cd.driver_id AS driverId, wr.wdcPos
-    FROM constructor_drivers cd
-    JOIN wdc_ranked wr ON wr.year = cd.year AND wr.driver_id = cd.driver_id
-    ORDER BY cd.year DESC, wr.wdcPos ASC
-  `, [constructorId]);
+      JOIN drivers d ON r.driver_id = d.id
+      JOIN poletimes pt ON pt.grandprix_id = gp.id
+      JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      WHERE r.place = '1' AND r.grid = '1' AND gp.date <= CURDATE()
+      GROUP BY d.id
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(DISTINCT r.grandprix_id) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      WHERE gp.date <= CURDATE()
+      GROUP BY d.id
+      HAVING SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) = 0
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(*) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      JOIN poletimes pt ON pt.grandprix_id = gp.id
+      WHERE r.place = '1' AND r.grid = '1' AND gp.date <= CURDATE()
+      GROUP BY d.id
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(*) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      WHERE r.place = '1' AND r.grid REGEXP '^[0-9]+$' AND CAST(r.grid AS UNSIGNED) > 1
+        AND gp.date <= CURDATE()
+      GROUP BY d.id
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        SUM(CASE WHEN r.place IN ('2','3') THEN 1 ELSE 0 END) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      WHERE gp.date <= CURDATE()
+      GROUP BY d.id
+      HAVING value > 0 AND SUM(CASE WHEN r.place = '1' THEN 1 ELSE 0 END) = 0
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(DISTINCT r.grandprix_id) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+      LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+      WHERE gp.date <= CURDATE()
+      GROUP BY d.id
+      HAVING SUM(${totalPts()}) = 0
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        SUM(CASE WHEN r.place = 'DNF' THEN 1 ELSE 0 END) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      WHERE gp.date <= CURDATE()
+      GROUP BY d.id
+      HAVING value > 0
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        COUNT(DISTINCT e.constructor_id) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      JOIN entrants e ON r.entrant_id = e.id
+      WHERE gp.date <= CURDATE()
+      GROUP BY d.id
+      HAVING value >= 2
+      ORDER BY value DESC
+    `),
+    query<{ driverId: number; name: string; value: number; current: number }>(`
+      SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
+        MAX(CAST(r.grid AS UNSIGNED)) AS value, d.current
+      FROM results r
+      JOIN grandsprix gp ON r.grandprix_id = gp.id
+      JOIN drivers d ON r.driver_id = d.id
+      WHERE r.place = '1' AND r.grid REGEXP '^[0-9]+$' AND CAST(r.grid AS UNSIGNED) > 1
+        AND gp.date <= CURDATE()
+      GROUP BY d.id
+      ORDER BY value DESC
+    `),
+  ]);
+  return { hatTricks, startsWithoutWin, winsFromPole, winsFromNonPole, podiumsWithoutWin, startsWithoutPoints, dnfs, constructorsRacedFor, lowestGridWin };
 }
 
 // ─── Consecutive streak records ───────────────────────────────────────────────
@@ -1417,8 +1690,8 @@ export async function getConsecutiveRecords() {
       )
       SELECT d.id AS driverId, CONCAT(d.firstName, ' ', d.surname) AS name,
         CAST(bf.value AS UNSIGNED) AS value,
-        CONCAT(YEAR(sg.date),' ',sg.shortTitle) AS startGp,
-        CONCAT(YEAR(eg.date),' ',eg.shortTitle) AS endGp,
+        CONCAT(YEAR(sg.date),' ',sg.shortTitle,' Grand Prix') AS startGp,
+        CONCAT(YEAR(eg.date),' ',eg.shortTitle,' Grand Prix') AS endGp,
         (bf.end_rn = lg.max_rn) AS isOngoing,
         d.current
       FROM best_final bf
@@ -1511,8 +1784,8 @@ export async function getConstructorConsecutiveRecords() {
       )
       SELECT c.id AS constructorId, COALESCE(NULLIF(c.name,''), c.shortName) AS name,
         CAST(bf.value AS UNSIGNED) AS value,
-        CONCAT(YEAR(sg.date),' ',sg.shortTitle) AS startGp,
-        CONCAT(YEAR(eg.date),' ',eg.shortTitle) AS endGp,
+        CONCAT(YEAR(sg.date),' ',sg.shortTitle,' Grand Prix') AS startGp,
+        CONCAT(YEAR(eg.date),' ',eg.shortTitle,' Grand Prix') AS endGp,
         (bf.end_rn = lg.max_rn) AS isOngoing,
         c.current
       FROM best_final bf

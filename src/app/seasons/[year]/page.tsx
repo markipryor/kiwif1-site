@@ -74,8 +74,61 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
         </div>
       </div>
 
+      {/* Race calendar */}
+      <h2 className="text-lg font-bold text-white mb-4">Race Calendar</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+              <th className="pb-3 text-left w-8">#</th>
+              <th className="pb-3 text-left">Grand Prix</th>
+              <th className="pb-3 text-left">Date</th>
+              <th className="pb-3 text-left">Winner</th>
+              <th className="pb-3 text-left">Constructor</th>
+              <th className="pb-3 text-center w-16"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800/60">
+            {races.map((r, i) => {
+              const winner = winnerMap.get(r.id);
+              return (
+                <tr key={r.id} className="hover:bg-zinc-900/60 transition-colors">
+                  <td className="py-2.5 text-zinc-500 font-mono text-xs">{i + 1}</td>
+                  <td className="py-2.5">
+                    <Link href={`/races/${r.id}/`} className="text-white font-medium hover:text-red-400 transition-colors">
+                      {r.shortTitle}
+                    </Link>
+                  </td>
+                  <td className="py-2.5 text-zinc-400">
+                    {new Date(r.date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+                  </td>
+                  <td className="py-2.5">
+                    {winner ? (
+                      <Link href={`/drivers/${winner.driverId}/`} className="text-zinc-300 hover:text-white transition-colors">
+                        {winner.driverName}
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-600 italic">Pending</span>
+                    )}
+                  </td>
+                  <td className="py-2.5">
+                    {winner ? (
+                      <Link href={`/constructors/${winner.constructorId}/`} className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">
+                        {winner.constructor}
+                      </Link>
+                    ) : null}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    {r.sprint ? <span className="text-xs bg-purple-900/50 text-purple-300 border border-purple-700/40 px-2 py-0.5 rounded-full">Sprint</span> : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {/* Driver standings */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 mt-12">
         <h2 className="text-lg font-bold text-white">{isComplete ? "Driver Standings" : "Driver Standings (In Progress)"}</h2>
         <span className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-400 px-2.5 py-1 rounded-full font-mono shrink-0">
           {pointsSystem(y)}
@@ -136,60 +189,6 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
           </div>
         </>
       )}
-
-      {/* Race calendar */}
-      <h2 className="text-lg font-bold text-white mb-4">Race Calendar</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-              <th className="pb-3 text-left w-8">#</th>
-              <th className="pb-3 text-left">Grand Prix</th>
-              <th className="pb-3 text-left">Date</th>
-              <th className="pb-3 text-left">Winner</th>
-              <th className="pb-3 text-left">Constructor</th>
-              <th className="pb-3 text-center w-16"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/60">
-            {races.map((r, i) => {
-              const winner = winnerMap.get(r.id);
-              return (
-                <tr key={r.id} className="hover:bg-zinc-900/60 transition-colors">
-                  <td className="py-2.5 text-zinc-500 font-mono text-xs">{i + 1}</td>
-                  <td className="py-2.5">
-                    <Link href={`/races/${r.id}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                      {r.shortTitle}
-                    </Link>
-                  </td>
-                  <td className="py-2.5 text-zinc-400">
-                    {new Date(r.date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
-                  </td>
-                  <td className="py-2.5">
-                    {winner ? (
-                      <Link href={`/drivers/${winner.driverId}/`} className="text-zinc-300 hover:text-white transition-colors">
-                        {winner.driverName}
-                      </Link>
-                    ) : (
-                      <span className="text-zinc-600 italic">Pending</span>
-                    )}
-                  </td>
-                  <td className="py-2.5">
-                    {winner ? (
-                      <Link href={`/constructors/${winner.constructorId}/`} className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">
-                        {winner.constructor}
-                      </Link>
-                    ) : null}
-                  </td>
-                  <td className="py-2.5 text-center">
-                    {r.sprint ? <span className="text-xs bg-purple-900/50 text-purple-300 border border-purple-700/40 px-2 py-0.5 rounded-full">Sprint</span> : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

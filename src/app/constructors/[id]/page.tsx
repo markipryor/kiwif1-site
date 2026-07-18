@@ -78,13 +78,13 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
   const isCurrent = Boolean(constructor.current);
 
   const statBoxes = [
-    { label: "Races", value: constructor.races, rank: ranks?.racesRank },
-    { label: "Wins", value: constructor.wins, rank: Number(constructor.wins) > 0 ? ranks?.winsRank : undefined },
-    { label: "Podiums", value: constructor.podiums, rank: Number(constructor.podiums) > 0 ? ranks?.podiumsRank : undefined },
-    { label: "Points", value: Number(constructor.points).toFixed(0), rank: Number(constructor.points) > 0 ? ranks?.pointsRank : undefined },
-    { label: "Poles", value: constructor.poles, rank: Number(constructor.poles) > 0 ? ranks?.polesRank : undefined },
-    { label: "Fastest Laps", value: constructor.fastestLaps, rank: Number(constructor.fastestLaps) > 0 ? ranks?.fastestLapsRank : undefined },
-    { label: "Drivers", value: constructor.drivers, rank: undefined },
+    { label: "Races",        value: constructor.races,                         rank: ranks?.racesRank,                                               rankTied: ranks?.racesRankTied },
+    { label: "Wins",         value: constructor.wins,                          rank: Number(constructor.wins) > 0 ? ranks?.winsRank : undefined,      rankTied: ranks?.winsRankTied },
+    { label: "Podiums",      value: constructor.podiums,                       rank: Number(constructor.podiums) > 0 ? ranks?.podiumsRank : undefined, rankTied: ranks?.podiumsRankTied },
+    { label: "Points",       value: Number(constructor.points).toFixed(0),     rank: Number(constructor.points) > 0 ? ranks?.pointsRank : undefined,  rankTied: ranks?.pointsRankTied },
+    { label: "Poles",        value: constructor.poles,                         rank: Number(constructor.poles) > 0 ? ranks?.polesRank : undefined,    rankTied: ranks?.polesRankTied },
+    { label: "Fastest Laps", value: constructor.fastestLaps,                   rank: Number(constructor.fastestLaps) > 0 ? ranks?.fastestLapsRank : undefined, rankTied: ranks?.fastestLapsRankTied },
+    { label: "Drivers",      value: constructor.drivers,                       rank: undefined,                                                       rankTied: undefined },
   ];
 
   return (
@@ -114,7 +114,7 @@ export default async function ConstructorPage({ params }: { params: Promise<{ id
             <p className="text-white font-bold text-xl">{s.value}</p>
             <p className="text-zinc-500 text-xs mt-0.5">{s.label}</p>
             {s.rank != null && (
-              <p className={`text-xs mt-1 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>#{s.rank} all-time</p>
+              <p className={`text-xs mt-1 ${s.rank === 1 ? "text-yellow-400" : s.rank === 2 ? "text-zinc-300" : s.rank === 3 ? "text-amber-600" : "text-zinc-500"}`}>{s.rankTied ? "=" : "#"}{s.rank} all-time</p>
             )}
           </div>
         ))}

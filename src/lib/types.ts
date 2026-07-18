@@ -60,6 +60,7 @@ export interface Race {
   circuit: string;
   circuitCity: string;
   country: string;
+  countryCode?: string | null;
   bestPoleTime: string | null;
   bestRaceLapTime: string | null;
 }
@@ -70,6 +71,7 @@ export interface RaceResult {
   grid: string | null;
   driverId: number;
   driverName: string;
+  nationalityCode: string | null;
   constructor: string;
   constructorId: number;
   time: string | null;

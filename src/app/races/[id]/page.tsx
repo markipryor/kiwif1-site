@@ -82,10 +82,13 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
       </div>
 
       <div className="mt-6 mb-6">
-        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">
+        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+          {race.countryCode && (
+            <span className={`fi fi-${race.countryCode.toLowerCase()} fis`} title={race.country} style={{ fontSize: "1rem" }} />
+          )}
           {new Date(race.date).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })} · {race.circuitCity}
         </p>
-        <h1 className="text-4xl font-bold text-white">{race.fullTitle ?? `${year} ${race.shortTitle} Grand Prix`}</h1>
+        <h1 className="text-4xl font-bold text-white">{race.fullTitle || `${year} ${race.shortTitle} Grand Prix`}</h1>
       </div>
 
       <div className="flex flex-wrap gap-4 text-xs text-zinc-400 mb-8">
@@ -125,9 +128,14 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
                     {gridDiff !== null && gridDiff < 0 && <span className="text-red-400 ml-1">▼{Math.abs(gridDiff)}</span>}
                   </td>
                   <td className="py-2.5">
-                    <Link href={`/drivers/${r.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                      {r.driverName}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      {r.nationalityCode && (
+                        <span className={`fi fi-${r.nationalityCode.toLowerCase()} fis`} style={{ fontSize: "1rem" }} />
+                      )}
+                      <Link href={`/drivers/${r.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors">
+                        {r.driverName}
+                      </Link>
+                    </div>
                   </td>
                   <td className="py-2.5">
                     <Link href={`/constructors/${r.constructorId}/`} className="text-zinc-400 text-xs hover:text-zinc-300 transition-colors">

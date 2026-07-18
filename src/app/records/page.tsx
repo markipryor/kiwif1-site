@@ -1,15 +1,16 @@
-import { getRecords, getAgeRecords, getConsecutiveRecords, getConstructorRecords, getConstructorConsecutiveRecords } from "@/lib/queries";
+import { getRecords, getAgeRecords, getConsecutiveRecords, getConstructorRecords, getConstructorConsecutiveRecords, getOtherRecords } from "@/lib/queries";
 import RecordsClient from "./RecordsClient";
 
 export const metadata = { title: "All-Time Records — KiwiF1" };
 
 export default async function RecordsPage() {
-  const [{ wins, podiums, poles, fastestLaps, points, races }, ageRecords, consecutive, constructorRecords, constructorConsecutive] = await Promise.all([
+  const [{ wins, podiums, poles, fastestLaps, points, races }, ageRecords, consecutive, constructorRecords, constructorConsecutive, otherRecords] = await Promise.all([
     getRecords(),
     getAgeRecords(),
     getConsecutiveRecords(),
     getConstructorRecords(),
     getConstructorConsecutiveRecords(),
+    getOtherRecords(),
   ]);
 
   return (
@@ -22,6 +23,7 @@ export default async function RecordsPage() {
         consecutive={consecutive}
         constructorRecords={constructorRecords}
         constructorConsecutive={constructorConsecutive}
+        otherRecords={otherRecords}
       />
     </div>
   );

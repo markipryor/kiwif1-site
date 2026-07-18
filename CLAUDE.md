@@ -57,12 +57,15 @@ When the user says to build and/or deploy, execute every step of the workflow au
 2. Circuit layout record update (`mysql.exe UPDATE`)
 3. Version bump in `layout.tsx`
 4. Task status update in `tasks.ts`
-5. `npm run build:<mode>` (any mode, retried automatically on failure)
-6. `npm run build:rankings` and/or `npm run build:records` if included
-7. `npm run validate`
-8. `npm run deploy`
-9. `npm run smoke:prod`
-10. `git add` + `git commit` for the build artifacts
+5. `git add` + `git commit` for all source changes (code, tasks.ts, layout.tsx) — **before building**
+6. `npm run build:<mode>` (any mode, retried automatically on failure)
+7. `npm run build:rankings` and/or `npm run build:records` if included
+8. `npm run validate`
+9. `npm run deploy`
+10. `npm run smoke:prod`
+11. `git add` + `git commit` for build artifacts (out/ directory changes, build.log)
+
+**Commit order matters:** Source changes (step 5) must be committed before deploying. If the session ends or the machine reboots after deploy but before the step-11 artifact commit, the source is still safe in GitHub. Never let a deploy happen without a preceding source commit.
 
 If something fails, investigate and fix it, but never stop to ask permission for any of the above steps.
 
@@ -126,11 +129,16 @@ WHERE cl.id = (
 
 This recalculates both records for the circuit layout of the most recent race. It is idempotent — safe to run every time regardless of whether a new record was set.
 
-## Committing after builds
+## Committing — mandatory order
 
-After every build **except** backlog-only builds (`npm run build:backlog`), commit all changes to GitHub before or immediately after deploying. Use a concise commit message describing what was rebuilt, e.g. `build: race 2025 Abu Dhabi GP` or `build: driver 397 partial rebuild`.
+**Source commit must happen before deploy, every time.**
 
-Backlog-only builds touch only `tasks.ts` and the backlog HTML — these are typically committed as part of the task change itself, not as a separate build commit.
+1. Before building: commit source changes (code edits, `tasks.ts`, `layout.tsx`) with a message like `feat: ...` or `fix: ...`.
+2. After deploy: commit build artifacts (`out/` changes, `build.log`) with a message like `build: race 2026 Belgian GP v6.4.13`.
+
+If the session crashes between these two commits, the source is safe. If only the artifact commit is missed, that is recoverable. If the source commit is missed and the session crashes after deploy, the live site is ahead of GitHub — this is the failure mode to avoid.
+
+**Backlog-only builds** (`npm run build:backlog`): commit `tasks.ts` changes as part of the task update itself, not as a separate build commit. No artifact commit needed for backlog-only builds.
 
 ## Build failures
 

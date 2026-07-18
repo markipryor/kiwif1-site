@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRecords, getConsecutiveRecords } from "@/lib/queries";
+import { getRecords, getConsecutiveRecords, getOtherRecords } from "@/lib/queries";
+import type { ConsecRow } from "@/lib/queries";
 import PointsTable from "../PointsTable";
 import type { PointsRow } from "../RecordsClient";
 
-type RecordRow = { driverId: number; name: string; value: number };
+type RecordRow = { driverId: number; name: string; value: number; current?: number };
 
 const MOST_CATEGORIES = {
   wins:           { label: "Most Wins",           key: "wins"        as const, consecutive: false },
@@ -25,7 +26,19 @@ const CONS_CATEGORIES = {
   "cons-starts":       { label: "Consecutive Race Starts",     key: "starts"      as const, consecutive: true },
 };
 
-const ALL_CATEGORIES = { ...MOST_CATEGORIES, ...CONS_CATEGORIES };
+const OTHER_CATEGORIES = {
+  "hat-tricks":           { label: "Most Hat-Tricks (Win, Pole & Fastest Lap)",    key: "hatTricks"           as const, consecutive: false, other: true },
+  "wins-from-pole":       { label: "Most Wins from Pole Position",                 key: "winsFromPole"        as const, consecutive: false, other: true },
+  "wins-from-non-pole":   { label: "Most Wins from Non-Pole",                      key: "winsFromNonPole"     as const, consecutive: false, other: true },
+  "podiums-without-win":  { label: "Most Podiums Without a Win",                   key: "podiumsWithoutWin"   as const, consecutive: false, other: true },
+  "starts-without-win":   { label: "Most Starts Without a Win",                    key: "startsWithoutWin"    as const, consecutive: false, other: true },
+  "starts-without-points":{ label: "Most Starts Without Scoring a Point",          key: "startsWithoutPoints" as const, consecutive: false, other: true },
+  "most-dnfs":            { label: "Most DNFs",                                    key: "dnfs"                as const, consecutive: false, other: true },
+  "constructors-raced-for":{ label: "Most Constructors Raced For",                 key: "constructorsRacedFor" as const, consecutive: false, other: true },
+  "lowest-grid-win":      { label: "Lowest Starting Position for a Race Win",      key: "lowestGridWin"       as const, consecutive: false, other: true },
+};
+
+const ALL_CATEGORIES = { ...MOST_CATEGORIES, ...CONS_CATEGORIES, ...OTHER_CATEGORIES };
 
 export function generateStaticParams() {
   return Object.keys(ALL_CATEGORIES).map(category => ({ category }));
@@ -42,21 +55,46 @@ function fmt(n: number | string) {
   return v % 1 === 0 ? v.toFixed(0) : v.toString();
 }
 
-function RowItem({ rank, driverId, name, value, max }: {
-  rank: number; driverId: number; name: string; value: number; max: number;
+function computeRanks(rows: { value: number | string }[]): string[] {
+  const values = rows.map(r => Number(r.value));
+  const ranks: string[] = [];
+  let currentRank = 1;
+  for (let i = 0; i < values.length; i++) {
+    if (i > 0 && values[i] !== values[i - 1]) currentRank = i + 1;
+    ranks.push(currentRank.toString());
+  }
+  const counts = new Map<string, number>();
+  ranks.forEach(r => counts.set(r, (counts.get(r) ?? 0) + 1));
+  return ranks.map(r => (counts.get(r) ?? 0) > 1 ? `=${r}` : r);
+}
+
+function DriverRowItem({ rank, row, max, consecutive }: {
+  rank: string; row: RecordRow | ConsecRow; max: number; consecutive: boolean;
 }) {
+  const cr = consecutive ? (row as ConsecRow) : null;
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">
-      <span className="text-zinc-500 text-sm w-6 text-right font-mono shrink-0">{rank}</span>
+      <span className="text-zinc-500 text-sm w-8 text-right font-mono shrink-0">{rank}</span>
       <div className="flex-1 min-w-0">
-        <Link href={`/drivers/${driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
-          {name}
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/drivers/${row.driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
+            {row.name}
+          </Link>
+          {!!row.current && (
+            <span className="text-xs bg-blue-900 text-blue-300 px-1.5 py-0.5 rounded font-medium">Current</span>
+          )}
+          {cr && !!cr.isOngoing && (
+            <span className="text-xs bg-green-900 text-green-300 px-1.5 py-0.5 rounded font-medium">Ongoing</span>
+          )}
+        </div>
+        {cr && (
+          <p className="text-zinc-500 text-xs mt-0.5">{cr.startGp} – {cr.endGp}</p>
+        )}
         <div className="w-full bg-zinc-800 rounded-full h-1 mt-2">
-          <div className="h-1 rounded-full bg-red-500" style={{ width: `${(value / max) * 100}%` }} />
+          <div className="h-1 rounded-full bg-red-500" style={{ width: `${(Number(row.value) / max) * 100}%` }} />
         </div>
       </div>
-      <span className="text-white font-bold text-base w-14 text-right shrink-0">{fmt(value)}</span>
+      <span className="text-white font-bold text-base w-14 text-right shrink-0">{fmt(row.value)}</span>
     </div>
   );
 }
@@ -66,12 +104,15 @@ export default async function RecordCategoryPage({ params }: { params: Promise<{
   const cat = ALL_CATEGORIES[category as keyof typeof ALL_CATEGORIES];
   if (!cat) notFound();
 
-  let rows: RecordRow[];
+  let rows: (RecordRow | ConsecRow)[];
   let pointsRows: PointsRow[] | null = null;
 
-  if (cat.consecutive) {
+  if ("other" in cat && cat.other) {
+    const otherRecords = await getOtherRecords();
+    rows = otherRecords[cat.key as keyof typeof otherRecords] as RecordRow[];
+  } else if (cat.consecutive) {
     const consRecords = await getConsecutiveRecords();
-    rows = consRecords[cat.key as keyof typeof consRecords] as RecordRow[];
+    rows = consRecords[cat.key as keyof typeof consRecords] as ConsecRow[];
   } else {
     const records = await getRecords();
     rows = records[cat.key as keyof typeof records] as RecordRow[];
@@ -95,9 +136,12 @@ export default async function RecordCategoryPage({ params }: { params: Promise<{
         <PointsTable rows={pointsRows} showTitle={false} />
       ) : (
         <div className="space-y-2">
-          {rows.map((r, i) => (
-            <RowItem key={r.driverId} rank={i + 1} driverId={r.driverId} name={r.name} value={Number(r.value)} max={max} />
-          ))}
+          {(() => {
+            const rankStrings = computeRanks(rows);
+            return rows.map((r, i) => (
+              <DriverRowItem key={r.driverId} rank={rankStrings[i]} row={r} max={max} consecutive={cat.consecutive} />
+            ));
+          })()}
         </div>
       )}
     </div>
