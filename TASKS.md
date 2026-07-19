@@ -75,7 +75,7 @@ Key items from `tasks.ts` that are `pending` or `deployed` (not yet confirmed do
 
 | ID | Title | Status |
 |----|-------|--------|
-| KF1-C-15 | Fix team histories | pending |
+| KF1-C-15 | Fix team histories | **done 19 Jul 2026** |
 | KF1-C-05 | More nationality data | pending |
 | KF1-D-ENH-09 | Redesign penalty section on driver page | pending |
 | KF1-D-ENH-14 | Driver fact card before season table | pending |
@@ -96,6 +96,9 @@ Key items from `tasks.ts` that are `pending` or `deployed` (not yet confirmed do
 ---
 
 ## Notes log
+
+### 2026-07-19
+- KF1-C-15 closed: all 13 constructor chains audited. Fixes applied to Renault (missing 1977 stint), Lotus (missing 1958 stint), Aston Martin (missing 1959 stint), Honda (missing 1964 stint), Mercedes (missing 1954 stint), Jordan (1950 data error). BMW Sauber entrant data corrected (2006–2010 = 89 races). All chains verified clean.
 
 ### 2026-07-18
 - Diagnosed git/deploy gap: v6.4.5–v6.4.10 deployed but never committed. Root cause: commit was step 10 (after deploy) in CLAUDE.md workflow. Fixed to step 7a (before deploy).
