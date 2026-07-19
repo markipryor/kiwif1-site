@@ -97,6 +97,9 @@ Key items from `tasks.ts` that are `pending` or `deployed` (not yet confirmed do
 
 ## Notes log
 
+### 2026-07-20
+- Deployed v6.4.13: all constructor pages rebuilt. Nationality, full name, founder populated for all 179 constructors. Hong Kong added (id=52). Kurtis Kraft flipped to indyOnly=1. UNION query fix makes Indy constructors visible. KF1-C-05 and KF1-C-15 marked deployed.
+
 ### 2026-07-19
 - KF1-C-15 closed: all 13 constructor chains audited. Fixes applied to Renault (missing 1977 stint), Lotus (missing 1958 stint), Aston Martin (missing 1959 stint), Honda (missing 1964 stint), Mercedes (missing 1954 stint), Jordan (1950 data error). BMW Sauber entrant data corrected (2006–2010 = 89 races). All chains verified clean.
 

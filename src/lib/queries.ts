@@ -453,8 +453,15 @@ export async function getAllConstructors(): Promise<(Constructor & ConstructorSt
       COUNT(DISTINCT r.driver_id) AS drivers
     FROM constructors c
     LEFT JOIN nationalities n ON c.nationality_id = n.id
-    JOIN entrants e ON e.constructor_id = c.id
-    JOIN results r ON r.entrant_id = e.id
+    JOIN (
+      SELECT r.grandprix_id, r.driver_id, r.place, r.grid, r.position,
+             r.fullPointsDriver, r.actualPointsDriver, e.constructor_id AS con_id
+      FROM results r JOIN entrants e ON r.entrant_id = e.id
+      UNION ALL
+      SELECT r.grandprix_id, r.driver_id, r.place, r.grid, r.position,
+             r.fullPointsDriver, r.actualPointsDriver, ca.constructor_id AS con_id
+      FROM results r JOIN cars ca ON r.car_id = ca.id WHERE r.entrant_id = 0
+    ) r ON r.con_id = c.id
     JOIN grandsprix gp ON r.grandprix_id = gp.id
     LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
     LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id

@@ -69,7 +69,7 @@ export const sections: Section[] = [
       { id: "KF1-C-02", title: "Add filters",                          complexity: "S", status: "done", version: "v6.0.10beta", description: "Filter constructors by nationality, active/inactive, or era." },
       { id: "KF1-C-03", title: "Flag icons",                           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show a nationality flag beside each constructor." },
       { id: "KF1-C-04", title: "Champion icons",                       complexity: "S", status: "done", version: "v6.0.10beta", description: "Visual indicator for constructors who have won the Constructors' Championship." },
-      { id: "KF1-C-05", title: "More nationality data",                complexity: "S", status: "pending", description: "Expand nationality coverage — many constructors currently have no nationality set." },
+      { id: "KF1-C-05", title: "More nationality data",                complexity: "S", status: "deployed", version: "v6.4.13", description: "Expand nationality coverage — many constructors currently have no nationality set." },
       { id: "KF1-C-06", title: "Simplify multi-line displays",         complexity: "S", status: "done", version: "v6.0.12beta", description: "The driver list in season-by-season rows can be very long — truncate or collapse it." },
       { id: "KF1-C-07", title: "Full names and short names",           complexity: "S", status: "done", version: "v6.0.10beta", description: "Show both the full constructor name and short name where space allows; use short name in compact views." },
       { id: "KF1-C-08", title: "Season stats broken down by driver",   complexity: "M", status: "done", version: "v6.0.12beta", description: "Expand each season row on the constructor detail page to show each driver's individual contribution. Poles and fastest laps columns added." },
@@ -79,7 +79,7 @@ export const sections: Section[] = [
       { id: "KF1-C-12", title: "Move last/latest race to new line", complexity: "S", status: "done", version: "v6.2.0", description: "On constructor detail pages, the last/latest race info should appear on a separate line below the first race, consistent with the layout on driver detail pages." },
       { id: "KF1-C-13", title: "Constructor bios", complexity: "L", status: "done", version: "7 Jul 2026", description: "Add a biography/history section to each constructor detail page. Initially can be short text sourced or written manually, covering founding, key eras, notable achievements, and current status." },
       { id: "KF1-C-14", title: "Season table: add WDC and WCC championship positions", complexity: "S", status: "done", version: "v6.3.2", description: "In the constructor season-by-season table, add columns for the constructor's final Constructors' Championship position (WCC pos) and the WDC winner for each season. WCC pos shown as P1/P2/… (gold for champion); WDC winner shown as a named link. Implemented together with C-11." },
-      { id: "KF1-C-15", title: "Fix team histories",                complexity: "M", status: "done", version: "19 Jul 2026", description: "Audit and correct the formedFrom/became chain data across all constructors. Review multi-value entries (e.g. '0,133') and constructors that returned under the same name after becoming another team (Sauber, March). Ensure chain links are accurate and the Team History section on each constructor page shows the correct lineage." },
+      { id: "KF1-C-15", title: "Fix team histories",                complexity: "M", status: "deployed", version: "v6.4.13", description: "Audit and correct the formedFrom/became chain data across all constructors. Review multi-value entries (e.g. '0,133') and constructors that returned under the same name after becoming another team (Sauber, March). Ensure chain links are accurate and the Team History section on each constructor page shows the correct lineage." },
       { id: "KF1-C-16", title: "Flag icon on constructor detail page", complexity: "S", status: "done", version: "v6.4.3", description: "Add the constructor's nationality flag icon to the constructor detail page header, alongside the nationality text. Consistent with the flag shown on driver detail pages and the constructors list." },
       { id: "KF1-C-17", title: "Show current WDC championship position on constructor page", complexity: "S", status: "deployed", version: "v6.4.9", description: "On constructor detail pages, the season-by-season table shows the WDC winner for each historical season. For the current (in-progress) season, also show the current WDC standings position for drivers racing for this constructor — so visitors can see how this team's drivers are placed in the live championship without leaving the page." },
       { id: "KF1-C-BUG-01", title: "Bug: Some constructor names not showing", complexity: "S", status: "done", version: "v6.0.6beta", description: "Constructor names are blank in some places — likely rows where both name and shortName are empty, or a JOIN returning null." },
@@ -200,6 +200,15 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.4.13",
+    changes: [
+      "Constructors: nationality, full name, and founder data populated for all 179 constructors — previously 123 had no nationality set (KF1-C-05)",
+      "Constructors: Hong Kong added as a nationality (Theodore Racing)",
+      "Constructors: Indy 500 constructors (Adams, Kuzma, Watson etc.) now appear in the All Constructors list when Indy 500 filter is enabled",
+      "Constructors: team history chains audited and corrected across all 13 multi-stint chains (KF1-C-15)",
+    ],
+  },
   {
     version: "v6.4.12",
     changes: [
