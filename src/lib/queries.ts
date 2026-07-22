@@ -892,8 +892,58 @@ export async function getSeasonRaceWinners(year: number) {
   `, [year]);
 }
 
+// Year → number of best results that count (pre-1991 drop rule).
+const DROP_RULE_BEST_N: Record<number, number> = {
+  1950: 4, 1951: 4, 1952: 4, 1953: 4,
+  1954: 5, 1955: 5, 1956: 5, 1957: 5,
+  1958: 6, 1959: 5, 1960: 6,
+  1961: 5, 1962: 5, 1963: 6, 1964: 6,
+  1965: 6, 1966: 5, 1967: 9, 1968: 9,
+  1969: 6, 1970: 6, 1971: 5, 1972: 5,
+  1973: 7, 1974: 7, 1975: 7, 1976: 7,
+  1977: 8, 1978: 7, 1979: 8, 1980: 10,
+  1981: 11, 1982: 11, 1983: 11, 1984: 11,
+  1985: 11, 1986: 11, 1987: 11, 1988: 11,
+  1989: 11, 1990: 11,
+};
+
+// Drivers/constructors officially excluded from championship standings for a specific year.
+// Their race points are real but the FIA stripped their championship position.
+const DRIVER_EXCLUSIONS: { year: number; driverId: number; reason: string }[] = [
+  { year: 1997, driverId: 441, reason: "Excluded from championship by FIA (Jerez collision)" },
+];
+const CONSTRUCTOR_EXCLUSIONS: { year: number; constructorId: number; reason: string }[] = [
+  { year: 2007, constructorId: 103, reason: "Excluded from championship by FIA (Spygate)" },
+];
+
 export async function getSeasonDriverStandings(year: number): Promise<SeasonStanding[]> {
-  const [rows, dist] = await Promise.all([
+  const bestN = DROP_RULE_BEST_N[year];
+  const netQuery: Promise<{ driverId: number; netPts: number; grossPts: number }[]> =
+    bestN !== undefined
+      ? query<{ driverId: number; netPts: number; grossPts: number }>(`
+          WITH race_pts AS (
+            SELECT r.driver_id, r.grandprix_id,
+              (${totalPts()}) AS pts
+            FROM results r
+            JOIN grandsprix gp ON r.grandprix_id = gp.id
+            LEFT JOIN fastestlaps fl ON fl.grandprix_id = gp.id AND fl.driver_id = r.driver_id
+            LEFT JOIN sprints s ON s.grandprix_id = gp.id AND s.driver_id = r.driver_id
+            WHERE YEAR(gp.date) = ?
+          ),
+          race_ranked AS (
+            SELECT driver_id, pts,
+              ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY pts DESC, grandprix_id ASC) AS rn
+            FROM race_pts
+          )
+          SELECT driver_id AS driverId,
+            SUM(CASE WHEN rn <= ${bestN} THEN pts ELSE 0 END) AS netPts,
+            SUM(pts) AS grossPts
+          FROM race_ranked
+          GROUP BY driver_id
+        `, [year])
+      : Promise.resolve([] as { driverId: number; netPts: number; grossPts: number }[]);
+
+  const [rows, dist, netRows] = await Promise.all([
     query<Omit<SeasonStanding, "pos">>(`
       SELECT
         d.id AS driverId,
@@ -922,7 +972,10 @@ export async function getSeasonDriverStandings(year: number): Promise<SeasonStan
       WHERE YEAR(gp.date) = ? AND r.place REGEXP '^[0-9]+$' AND CAST(r.place AS UNSIGNED) > 0
       GROUP BY r.driver_id, CAST(r.place AS UNSIGNED)
     `, [year]),
+    netQuery,
   ]);
+
+  const netMap = new Map(netRows.map(r => [r.driverId, { net: Number(r.netPts), gross: Number(r.grossPts) }]));
 
   const placeDist = new Map<number, Map<number, number>>();
   for (const { driverId, place, cnt } of dist) {
@@ -933,7 +986,9 @@ export async function getSeasonDriverStandings(year: number): Promise<SeasonStan
   for (const r of dist) { if (r.place > maxPos) maxPos = r.place; }
 
   const sorted = [...rows].sort((a, b) => {
-    const ptsDiff = Number(b.points) - Number(a.points);
+    const aNet = netMap.get(a.driverId)?.net ?? Number(a.points);
+    const bNet = netMap.get(b.driverId)?.net ?? Number(b.points);
+    const ptsDiff = bNet - aNet;
     if (ptsDiff !== 0) return ptsDiff;
     const da = placeDist.get(a.driverId) ?? new Map<number, number>();
     const db = placeDist.get(b.driverId) ?? new Map<number, number>();
@@ -944,7 +999,22 @@ export async function getSeasonDriverStandings(year: number): Promise<SeasonStan
     return 0;
   });
 
-  return sorted.map((r, i) => ({ pos: i + 1, ...r }));
+  const driverExclusions = DRIVER_EXCLUSIONS.filter(e => e.year === year);
+  let pos = 0;
+  return sorted.map(r => {
+    const netInfo = netMap.get(r.driverId);
+    const netPts = netInfo?.net ?? Number(r.points);
+    const grossPts = netInfo?.gross ?? Number(r.points);
+    const isExcluded = driverExclusions.some(e => e.driverId === r.driverId);
+    if (!isExcluded) pos++;
+    return {
+      ...r,
+      points: netPts,
+      grossPoints: grossPts !== netPts ? grossPts : undefined,
+      pos: isExcluded ? 0 : pos,
+      excluded: isExcluded || undefined,
+    };
+  });
 }
 
 export async function getSeasonConstructorStandings(year: number): Promise<ConstructorStanding[]> {
@@ -994,7 +1064,13 @@ export async function getSeasonConstructorStandings(year: number): Promise<Const
     return 0;
   });
 
-  return sorted.map((r, i) => ({ pos: i + 1, ...r }));
+  const constructorExclusions = CONSTRUCTOR_EXCLUSIONS.filter(e => e.year === year);
+  let cpos = 0;
+  return sorted.map(r => {
+    const isExcluded = constructorExclusions.some(e => e.constructorId === r.constructorId);
+    if (!isExcluded) cpos++;
+    return { ...r, pos: isExcluded ? 0 : cpos, excluded: isExcluded || undefined };
+  });
 }
 
 // ─── Records ──────────────────────────────────────────────────────────────────

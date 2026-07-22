@@ -158,7 +158,7 @@ export const sections: Section[] = [
       { id: "KF1-DI-16", title: "Cross-check top driver stats against official records",     complexity: "M", status: "pending", description: "For 5–10 well-known drivers (Hamilton, Schumacher, Senna, Prost, Verstappen etc.) compare our computed wins, poles, points, and championships against Wikipedia/official F1 stats." },
       { id: "KF1-DI-17", title: "Cross-check top constructor stats against official records", complexity: "M", status: "pending", description: "For top constructors (Ferrari, Mercedes, Red Bull, McLaren, Williams) compare our computed wins, poles, points, and championships against official records." },
       { id: "KF1-DI-20", title: "Find constructors with no results",                         complexity: "S", status: "pending", description: "Query constructors that have zero results (no rows via entrant_id or car_id). Distinguish genuine data gaps from reference-only entries. Known cases as of 20 Jul 2026: three blank-name constructors (ids 17, 35, 53) that need identifying or removing; Team Lotus (id 92) which may be a duplicate of Lotus; and several Indy 500 builders (e.g. Deidt id 38, Epperly id 49) that have a car record but no result rows entered. Decide per constructor whether to populate results, merge, or delete." },
-      { id: "KF1-DI-21", title: "Verify championship points season by season",              complexity: "L", status: "pending", description: "For every season, compare the computed driver (and constructor) championship points tables on the site against official/Wikipedia standings. Work backwards from the current season until a discrepancy is found, then investigate and fix the underlying data or points logic. Complements KF1-DI-01/02 (champion verification) by checking the full points totals for every position, not just the title winner." },
+      { id: "KF1-DI-21", title: "Verify championship points season by season",              complexity: "L", status: "deployed", version: "v6.4.14", description: "For every season, compare the computed driver (and constructor) championship points tables on the site against official/Wikipedia standings. CHECKED Jul 2026 — All seasons 1981–2025 verified. Data fixes: Haas 2019 (Magnussen/Grosjean entrants missing), Jordan/Minardi 2002 (entrants missing), Arrows 2000 (Verstappen/de la Rosa entrants missing). Display fixes: McLaren 2007 shown as EX (Spygate exclusion), Schumacher 1997 shown as EX (Jerez DQ). Pre-1991 gross vs net: season pages now apply the historical best-N drop rule, sorting by net points and showing gross in brackets (e.g. 'Senna 90 (94)'). Seasons 1950–1980 not formally verified beyond spot checks; data quality not guaranteed." },
     ],
   },
   {
@@ -203,6 +203,13 @@ export const sections: Section[] = [
 ];
 
 export const deployed: { version: string; changes: string[] }[] = [
+  {
+    version: "v6.4.14",
+    changes: [
+      "Season pages: Pre-1991 driver standings now apply the historical best-N-results drop rule — sorted by net (championship) points; gross points shown in brackets where they differ (e.g. 'Senna 90 (94)'). Fixes incorrect 1988 ordering (Prost was shown first on 105 gross; Senna correctly leads on 90 net). KF1-DI-21.",
+      "Season pages: 1997 Schumacher and 2007 McLaren shown as EX (FIA championship exclusion) in driver/constructor standings.",
+    ],
+  },
   {
     version: "v6.4.13",
     changes: [

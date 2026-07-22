@@ -86,10 +86,12 @@ export interface SeasonStanding {
   constructor: string;
   constructorId: number;
   points: number;
+  grossPoints?: number;
   wins: number;
   podiums: number;
   poles: number;
   fastestLaps: number;
+  excluded?: boolean;
 }
 
 export interface ConstructorStanding {
@@ -98,5 +100,6 @@ export interface ConstructorStanding {
   name: string;
   points: number;
   wins: number;
+  excluded?: boolean;
 }
 

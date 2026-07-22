@@ -136,13 +136,14 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
       </div>
       <div className="space-y-2 mb-12">
         {driverStandings.map((d) => (
-          <div key={`${d.driverId}-${d.constructorId}`} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">
-            <span className="text-zinc-500 text-sm w-6 text-right font-mono">{d.pos}</span>
+          <div key={`${d.driverId}-${d.constructorId}`} className={`border rounded-lg px-4 py-3 flex items-center gap-4 ${d.excluded ? "bg-zinc-950 border-zinc-700 opacity-60" : "bg-zinc-900 border-zinc-800"}`}>
+            <span className="text-zinc-500 text-sm w-6 text-right font-mono">{d.excluded ? "EX" : d.pos}</span>
             <div className="flex-1 min-w-0">
               <Link href={`/drivers/${d.driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
                 {d.name}
               </Link>
               <p className="text-zinc-500 text-xs">
+                {d.excluded && <span className="text-zinc-600 mr-1">Excluded from championship ·</span>}
                 <Link href={`/constructors/${d.constructorId}/`} className="hover:text-zinc-300 transition-colors">
                   {d.constructor}
                 </Link>
@@ -155,7 +156,10 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
               {Number(d.fastestLaps) > 0 && <div><p className="text-white font-medium">{d.fastestLaps}</p><p>FL</p></div>}
             </div>
             <div className="text-right min-w-[60px]">
-              <p className="text-white font-bold text-lg">{Number(d.points).toFixed(0)}</p>
+              <p className="text-white font-bold text-lg">
+                {Number(d.points).toFixed(0)}
+                {d.grossPoints !== undefined && <span className="text-zinc-500 text-sm font-normal ml-1">({Number(d.grossPoints).toFixed(0)})</span>}
+              </p>
               <div className="w-full bg-zinc-800 rounded-full h-1 mt-1">
                 <div className="h-1 rounded-full bg-red-500" style={{ width: `${(Number(d.points) / Number(maxDriverPoints)) * 100}%` }} />
               </div>
@@ -170,13 +174,15 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
           <h2 className="text-lg font-bold text-white mb-4">{isComplete ? "Constructor Standings" : "Constructor Standings (In Progress)"}</h2>
           <div className="space-y-2 mb-12">
             {constructorStandings.map((c) => (
-              <div key={c.constructorId} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 flex items-center gap-4">
-                <span className="text-zinc-500 text-sm w-6 text-right font-mono">{c.pos}</span>
+              <div key={c.constructorId} className={`border rounded-lg px-4 py-3 flex items-center gap-4 ${c.excluded ? "bg-zinc-950 border-zinc-700 opacity-60" : "bg-zinc-900 border-zinc-800"}`}>
+                <span className="text-zinc-500 text-sm w-6 text-right font-mono">{c.excluded ? "EX" : c.pos}</span>
                 <div className="flex-1">
                   <Link href={`/constructors/${c.constructorId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
                     {c.name}
                   </Link>
-                  <p className="text-zinc-500 text-xs">{c.wins} win{c.wins !== 1 ? "s" : ""}</p>
+                  <p className="text-zinc-500 text-xs">
+                    {c.excluded ? <span className="text-zinc-600">Excluded from championship</span> : <>{c.wins} win{c.wins !== 1 ? "s" : ""}</>}
+                  </p>
                 </div>
                 <div className="text-right min-w-[60px]">
                   <p className="text-white font-bold text-lg">{Number(c.points).toFixed(0)}</p>
