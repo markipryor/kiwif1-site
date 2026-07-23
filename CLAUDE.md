@@ -69,6 +69,8 @@ When the user says to build and/or deploy, execute every step of the workflow au
 
 If something fails, investigate and fix it, but never stop to ask permission for any of the above steps.
 
+**Race updates specifically:** When the user says "do a race update" or "I have entered race results", run the entire sequence above without any prompts — including marking the backlog task `"deployed"` and running the smoke test. The smoke test pass/fail is the only output needed at the end. Do not ask whether to close the backlog task; do not ask whether to proceed at any step.
+
 ## Deploy
 
 ```
@@ -302,4 +304,4 @@ This backs up all sections, regenerates only the listed pages, then restores the
 - New tasks start as `"pending"`.
 - After a build+deploy that includes the feature, mark as `"deployed"` (add `version` field).
 - Only mark `"done"` when the user explicitly confirms.
-- After deploying race data updates, always ask the user if they want to close the corresponding backlog task.
+- Race data tasks (KF1-2026-R##): automatically mark `"deployed"` during the source-commit step — no prompt needed. The smoke test is the final output; nothing else is required from the user.
