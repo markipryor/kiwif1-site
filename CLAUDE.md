@@ -2,6 +2,8 @@
 
 # KiwiF1 Site — Project Rules
 
+See also `~/.claude/CLAUDE.md` for rules universal to every project (flag paid actions, verify bugs against the real live behavior before fixing, retry obviously-transient build failures once automatically). This project's own "Build/deploy: proceed without confirmation" section below is a deliberate, explicit override of that file's commit-before-ship confirmation default — kept as one continuous pre-approved sequence rather than gated at each step.
+
 ## Build modes
 
 Use `npm run build:<mode>` — this runs `setup-build.js` to set `.build-config.json` automatically, then builds. Never manually edit `.build-config.json` for standard builds.
@@ -298,6 +300,171 @@ This backs up all sections, regenerates only the listed pages, then restores the
 
 - **Driver 397 (Jack Aitken)**: single race (2020 Sakhir GP), `dateOfDeath = 1970-01-01` in DB (epoch, handled as NULL by CASE in `getDriverById`). Previously had a stale RSC payload missing `seasonCumulative` — fixed 2026-07-05.
 - **Races with circuitlayout_id = 0**: INNER JOINs on circuitlayouts cause `notFound()`. Always use LEFT JOIN (see Key query gotchas above).
+
+## Data integrity checks
+
+Two files track ongoing data integrity work. Read and update these whenever doing integrity checks:
+
+- **`DI_LOG.md`** — append-only log. Each check session adds a dated section with findings (clean years, discrepancies, fixes applied). Never overwrite existing entries. Use prior entries to detect whether a previously-found issue has been resolved on recheck.
+- **`DI_TODO.md`** — living action list. Add items when new issues are found; mark `[x]` when fixed and deployed. Keep resolved items in the Resolved section for historical reference.
+
+**At the start of any integrity check session:** read both files to see what has already been checked and what is outstanding.
+
+**After any integrity check session:** append a new dated section to `DI_LOG.md` and update `DI_TODO.md` (add new items, mark resolved ones).
+
+### Pre-1991 constructor standings (DI-03 — known, not yet fixed)
+
+Official WCC rules required only the best-placed car per constructor per race to count. Our site sums all drivers — constructor champions are wrong for many pre-1991 seasons. This is a complex query rewrite, not yet scoped.
+
+### Drop rule verification (1950–1990)
+
+`DROP_RULE_BEST_N` in `queries.ts` and `seasonPtsCTE()` both contain the year → best-N mapping. Values were researched but some need verification against official records. Known issue: `1969: 6` is likely wrong (Wikipedia gross totals match official, suggesting no drop rule in 1969). Both locations must be updated together if corrected.
+
+---
+
+## Race result verification — 2026
+
+Script: `C:\xampp\htdocs\kiwif1\check_2026.php`.
+
+**Autonomous workflow** — when the user asks to run the data/race check, do this with no prompts:
+1. Ensure MySQL is running (start XAMPP if needed — see Build/deploy section)
+2. Run: `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2026.php"`
+3. Report: any FAIL lines, then the summary line
+4. Done — do not ask permission to run, do not recommend additional checks first, do not ask whether to fix issues found
+
+**Checks performed per race (race-level):**
+- Full title not empty and not equal to short title
+- Laps > 1
+
+**Checks performed per race (results):**
+- Exactly 22 results
+- No duplicate driver
+- No duplicate position (position=0 excluded — DNS/DNF)
+- No duplicate grid (NULL/0/empty/PL excluded — PL = pit lane start, legitimately shared)
+- No duplicate qualified position (NULL/empty excluded)
+- qualifySession counts: Q1=6, Q2=6, Q3=10 (2026 format, 22 cars)
+- Exactly 2 results per entrant (team)
+- Exactly 1 fastest lap entry with non-empty time
+- Exactly 1 pole time entry (`poletimes` table) with non-empty time
+- fullPoints = 1 (flags half-points races)
+- Every result row has a non-empty time (DNP exempt — driver did not participate, no time expected)
+- DNF/DNE/DNS/DQ/DNP/EXCL results all have a reason_id
+- Times in same order as positions (P1 has absolute time; P2+ gap times non-decreasing; DQ/EXCL excluded — their position is artificially moved to last while time reflects on-road finish)
+- Future races have 0 results
+
+**Sprint races:** same checks on `sprints` table (22 results, no dup position/grid[excl PL]/qualified/driver, all have time, times in order)
+
+**Last run: 2026-07-31 — ALL CHECKS PASSED** (11 races, 4 sprint weekends)
+
+## Race result verification — 2013–2014
+
+Script: `C:\xampp\htdocs\kiwif1\check_2013_2014.php`.
+
+**Autonomous workflow:** ensure MySQL running → `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2013_2014.php"` → report FAILs + summary → done. Optional single-year: append year as argument (e.g. `check_2013_2014.php 2014`).
+
+**Same rules as 2016:** 22 results, Q1=6/Q2=6/Q3=10, 11 teams, no sprints.
+
+**2014 late-season overrides** (Caterham/Marussia administration — hardcoded by grandprix_id):
+
+| Race | ID | Results | Q1/Q2/Q3 | Note |
+|------|----|---------|----------|------|
+| Russia 2014 | 913 | 21 | 5/6/10 | Marussia 1 car only (Bianchi hospitalized after Japan) |
+| USA 2014 | 914 | 18 | 4/4/10 | Caterham and Marussia both absent |
+| Brazil 2014 | 915 | 18 | 4/4/10 | Caterham and Marussia both absent |
+| Abu Dhabi 2014 | 916 | 20 | 5/5/10 | Caterham returned (crowdfunded); Marussia absent |
+
+Russia 2014 also allows entrants with 1 result (Marussia's single car entry).
+
+**Last run: 2026-08-03 — 1 issue found** (19 races, 2014 only)
+
+| Category | Count | Detail |
+|----------|-------|--------|
+| Malaysia 2014: no time | 1 | Sergio Perez (DNS) — user fixing manually |
+
+**Note:** Abu Dhabi 2014 Ricciardo and Vettel both have `qualified = 'EX'` (times excluded, pit lane start) — legitimate duplicate; fixed by restricting duplicate-qualified check to numeric values only (applied to all check scripts).
+
+## Race result verification — 2015
+
+Script: `C:\xampp\htdocs\kiwif1\check_2015.php`.
+
+**Autonomous workflow:** ensure MySQL running → `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2015.php"` → report FAILs + summary → done.
+
+**Same rules as 2017–2020:** 20 results, Q1=5/Q2=5/Q3=10, 10 teams, no sprints.
+
+**Known exception:** Australia 2015 — Manor (Merhi + Stevens) DNP in qualifying; only 18 cars ran Q1 so FIA eliminated 3 not 5 → override Q1=3/Q2=5/Q3=10 (hardcoded in script by grandprix_id=917).
+
+**Outstanding data issues (user fixing manually):**
+- Australia 2015: grid=1 for Valtteri Bottas (should be 6, matching qualified=6) — data entry error
+- Australia 2015: no time for Kvyat, Magnussen, Bottas (DNS)
+- Malaysia 2015: no time for Will Stevens (DNS)
+- Bahrain 2015: no time for Jenson Button (DNS)
+- Great Britain 2015: no time for Felipe Nasr (DNS)
+
+**Last run: 2026-08-03 — 1 issue found** (19 races)
+
+| Category | Count | Detail |
+|----------|-------|--------|
+| Duplicate grid P1 | 1 | Australia 2015: Bottas has grid=1 (should be 6) |
+
+## Race result verification — 2016
+
+Script: `C:\xampp\htdocs\kiwif1\check_2016.php`.
+
+**Autonomous workflow:** ensure MySQL running → `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2016.php"` → report FAILs + summary → done.
+
+**Differences from 2017–2020:**
+- 22 results per race (11 teams × 2 cars: Mercedes, Ferrari, Red Bull, Williams, Force India, McLaren, Toro Rosso, Haas, Renault, Sauber, Manor)
+- qualifySession: Q1=6, Q2=6, Q3=10 (22 cars, 2016 format: 6 eliminated in Q1, 6 in Q2, 10 in Q3)
+- Exactly 2 results per entrant (11 teams)
+- No sprint races
+
+**Checks per race:** full title (not empty/same as short), laps > 1, exactly 22 results, no duplicate driver/position/grid(excl PL)/qualified, qualifySession Q1=6/Q2=6/Q3=10, exactly 2 results per entrant (11 teams), exactly 1 fastest lap with time, exactly 1 pole time, every result has a time (DNP exempt), DNF/DNE/DNS/DQ/DNP/EXCL have a reason, times in order of positions (DQ/EXCL excluded). fullPoints ≠ 1 is a NOTE not a FAIL.
+
+**Last run: 2026-08-03 — ALL CHECKS PASSED** (21 races)
+
+**Known data gap fixed:** Pascal Wehrlein (2016 British GP) had qualifySession stored as empty string instead of 'Q1' — fixed directly in DB. Check script should also filter `qualifySession != ''` in addition to `IS NOT NULL` to catch this class of bug.
+
+## Race result verification — 2017–2020
+
+Script: `C:\xampp\htdocs\kiwif1\check_2017_2020.php`.
+
+**Autonomous workflow:** ensure MySQL running → `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2017_2020.php"` → report FAILs + summary → done. Optional single-year: append year as argument (e.g. `check_2017_2020.php 2019`).
+
+**Differences from 2021–2025:**
+- No sprint races in this era — all sprint checks removed
+- fullPoints ≠ 1 is a NOTE not a FAIL
+- DNP exempt from missing-time check
+
+**Checks per race:** full title (not empty/same as short), laps > 1, exactly 20 results, no duplicate driver/position/grid(excl PL)/qualified, qualifySession Q1=5/Q2=5/Q3=10, exactly 2 results per entrant (10 teams), exactly 1 fastest lap with time, exactly 1 pole time, every result has a time (DNP exempt), DNF/DNE/DNS/DQ/DNP/EXCL have a reason, times in order of positions (DQ/EXCL excluded).
+
+**Last run: 2026-08-02**
+
+## Race result verification — 2021–2025
+
+Script: `C:\xampp\htdocs\kiwif1\check_2021_2025.php`.
+
+**Autonomous workflow** — same as 2026: ensure MySQL running → run script → report FAILs + summary → done.
+Run: `& "C:\xampp\php\php.exe" "C:\xampp\htdocs\kiwif1\check_2021_2025.php"`
+
+**Differences from 2026 checks:**
+- 20 results per race (10 teams, 2 per entrant)
+- qualifySession: Q1=5, Q2=5, Q3=10
+- 20 sprint results per sprint race
+- fullPoints ≠ 1 is a NOTE not a FAIL (half-points races are legitimate historical events)
+- Known exception: 2021 Belgium (grandprix_id=1047) — rain-shortened, laps=1, fullPoints=0, no fastest lap; all expected and suppressed in output
+
+**Last run: 2026-08-01 — 35 issues found** (114 races, 24 sprint weekends)
+
+| Category | Count | Races affected |
+|----------|-------|----------------|
+| qualifySession wrong (one driver in wrong Q session) | 8 | Belgium/Dutch/São Paulo/Qatar 2021, GB/Azerbaijan 2024, Saudi Arabia/Las Vegas 2025 |
+| Duplicate finishing position | 7 | GB 2021, Saudi Arabia 2022, GB 2022, São Paulo 2023 (×2), Monaco 2025 |
+| Duplicate grid position | 5 | Abu Dhabi 2021, Australia 2022, Belgium 2024, Spain 2025 |
+| Duplicate qualifying position | 3 | Australia 2022, Dutch 2024, Azerbaijan 2024 |
+| Missing time on result row | 7 | Monaco/Abu Dhabi 2021, USA 2022, Austria 2022 sprint, Azerbaijan 2023 sprint, Australia 2024, Australia 2025 — note: DNP (e.g. Singapore 2023 Stroll) is exempt, no time expected |
+| Missing reason for DNF/DNS | 1 | Qatar 2024 (Colapinto DNF) |
+| Times out of order vs positions | 2 | GB 2021 (linked to dup P17), China 2025 (P10/P11 likely swapped) |
+| Miami 2025 sprint: dup grid+qualified P13 | 1 | Miami 2025 sprint |
 
 ## Backlog task lifecycle
 
