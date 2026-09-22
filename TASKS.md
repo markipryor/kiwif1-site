@@ -97,6 +97,11 @@ Key items from `tasks.ts` that are `pending` or `deployed` (not yet confirmed do
 
 ## Notes log
 
+### 2026-09-22
+- Race update: entered and deployed R11 Hungarian GP, R12 Dutch GP, R13 Italian GP, R14 Spanish GP (grandprix ids 1160–1163), all confirmed 22 results each. Circuit pole/lap records recalculated for all 4 circuits (layout ids 1021, 1044, 1026, 1049). Deployed as **v6.4.16**. KF1-2026-R11 through R14 marked `deployed` in `tasks.ts`.
+- **Real build tooling bug found and fixed**: `npm run build:full` had been silently skipping races/comparisons/constructors — `setup-build.js`'s `full` mode just deleted `.build-config.json`, but `prebuild.js` treats a *missing* config as a narrower "legacy mode" that only fully rebuilds drivers/seasons, restoring everything else from stale `out/` backups. Caught because race 1160's output page still had a July timestamp after a "successful" `build:full` run. Fixed `setup-build.js` to explicitly write an all-sections config; documented in `CLAUDE.md`. Worked around this specific deploy with a manually-written `.build-config.json` before the fix landed, then verified race 1160's live page via WebFetch (correct winner/results) before trusting it.
+- Next pending races: R15 Azerbaijan (26 Sep) onward — not yet raced as of this date.
+
 ### 2026-07-20
 - Deployed v6.4.13: all constructor pages rebuilt. Nationality, full name, founder populated for all 179 constructors. Hong Kong added (id=52). Kurtis Kraft flipped to indyOnly=1. UNION query fix makes Indy constructors visible. KF1-C-05 and KF1-C-15 marked deployed.
 
