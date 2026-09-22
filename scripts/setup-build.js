@@ -60,8 +60,24 @@ async function main() {
   }
 
   if (mode === 'full') {
-    if (fs.existsSync(CONFIG_FILE)) fs.rmSync(CONFIG_FILE);
-    console.log('[setup-build] Full mode: cleared .build-config.json — all sections will be rebuilt.');
+    // Previously just deleted the config file, on the assumption that "no
+    // config" means "rebuild everything" -- but prebuild.js's isActive()
+    // treats a missing config as legacy mode, which only fully rebuilds
+    // drivers and seasons; races/comparisons/constructors were silently
+    // restored from whatever stale backup already existed in out/. Found
+    // 2026-09-22 when a 4-race update deployed with unchanged race pages.
+    // Writing an explicit all-sections config is what actually rebuilds
+    // everything, matching this mode's name and documented behaviour.
+    const config = {
+      mode: 'full',
+      races: 'all',
+      drivers: 'all',
+      constructors: 'all',
+      seasons: 'all',
+      comparisons: 'all',
+    };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    console.log('[setup-build] Full mode: wrote .build-config.json with every section set to "all".');
     return;
   }
 
