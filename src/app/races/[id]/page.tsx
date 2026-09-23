@@ -104,51 +104,94 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
 
       {/* Race results */}
       <h2 className="text-lg font-bold text-white mb-4">Race Result</h2>
-      <div className="overflow-x-auto mb-12">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-              <th className="pb-3 text-left w-8">Pos</th>
-              <th className="pb-3 text-left w-10">Grid</th>
-              <th className="pb-3 text-left">Driver</th>
-              <th className="pb-3 text-left">Constructor</th>
-              <th className="pb-3 text-right">Time / Gap</th>
-              <th className="pb-3 text-right w-12">Pts</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/60">
-            {results.map((r) => {
-              const gridDiff = r.grid && /^\d+$/.test(r.grid) ? Number(r.grid) - r.position : null;
-              return (
-                <tr key={`${r.driverId}-${r.position}`} className="hover:bg-zinc-900/60 transition-colors">
-                  <td className="py-2.5 font-bold text-white w-8">{r.place}</td>
-                  <td className="py-2.5 text-zinc-500 font-mono text-xs w-10">
-                    {r.grid ?? "—"}
+      <div className="mb-12">
+        {/* sm and up: full table. Below sm: stacked two-line cards instead
+            of the same 6-column table needing horizontal scroll to read --
+            piloting a responsive-breakpoint approach (one codebase, no
+            separate app-only view) for KF1-X-11's "cramped on narrow
+            screens" complaint, tried here first since this table already
+            had a known concrete report. */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                <th className="pb-3 text-left w-8">Pos</th>
+                <th className="pb-3 text-left w-10">Grid</th>
+                <th className="pb-3 text-left">Driver</th>
+                <th className="pb-3 text-left">Constructor</th>
+                <th className="pb-3 text-right">Time / Gap</th>
+                <th className="pb-3 text-right w-12">Pts</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800/60">
+              {results.map((r) => {
+                const gridDiff = r.grid && /^\d+$/.test(r.grid) ? Number(r.grid) - r.position : null;
+                return (
+                  <tr key={`${r.driverId}-${r.position}`} className="hover:bg-zinc-900/60 transition-colors">
+                    <td className="py-2.5 font-bold text-white w-8">{r.place}</td>
+                    <td className="py-2.5 text-zinc-500 font-mono text-xs w-10">
+                      {r.grid ?? "—"}
+                      {gridDiff !== null && gridDiff > 0 && <span className="text-green-400 ml-1">▲{gridDiff}</span>}
+                      {gridDiff !== null && gridDiff < 0 && <span className="text-red-400 ml-1">▼{Math.abs(gridDiff)}</span>}
+                    </td>
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        {r.nationalityCode && (
+                          <span className={`fi fi-${r.nationalityCode.toLowerCase()} fis`} style={{ fontSize: "1rem" }} />
+                        )}
+                        <Link href={`/drivers/${r.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors">
+                          {r.driverName}
+                        </Link>
+                      </div>
+                    </td>
+                    <td className="py-2.5">
+                      <Link href={`/constructors/${r.constructorId}/`} className="text-zinc-400 text-xs hover:text-zinc-300 transition-colors">
+                        {r.constructor}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 text-zinc-300 text-right font-mono text-xs">{r.time ?? "—"}</td>
+                    <td className="py-2.5 text-right font-bold text-white">{Number(r.points) > 0 ? Number(r.points).toFixed(0) : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="sm:hidden divide-y divide-zinc-800/60">
+          {results.map((r) => {
+            const gridDiff = r.grid && /^\d+$/.test(r.grid) ? Number(r.grid) - r.position : null;
+            return (
+              <div key={`${r.driverId}-${r.position}-m`} className="py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold text-white w-6 shrink-0">{r.place}</span>
+                    {r.nationalityCode && (
+                      <span className={`fi fi-${r.nationalityCode.toLowerCase()} fis shrink-0`} style={{ fontSize: "1rem" }} />
+                    )}
+                    <Link href={`/drivers/${r.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors truncate">
+                      {r.driverName}
+                    </Link>
+                  </div>
+                  <span className="font-bold text-white shrink-0">{Number(r.points) > 0 ? Number(r.points).toFixed(0) : ""}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1 pl-8">
+                  <span className="font-mono">
+                    Grid {r.grid ?? "—"}
                     {gridDiff !== null && gridDiff > 0 && <span className="text-green-400 ml-1">▲{gridDiff}</span>}
                     {gridDiff !== null && gridDiff < 0 && <span className="text-red-400 ml-1">▼{Math.abs(gridDiff)}</span>}
-                  </td>
-                  <td className="py-2.5">
-                    <div className="flex items-center gap-1.5">
-                      {r.nationalityCode && (
-                        <span className={`fi fi-${r.nationalityCode.toLowerCase()} fis`} style={{ fontSize: "1rem" }} />
-                      )}
-                      <Link href={`/drivers/${r.driverId}/`} className="text-white font-medium hover:text-red-400 transition-colors">
-                        {r.driverName}
-                      </Link>
-                    </div>
-                  </td>
-                  <td className="py-2.5">
-                    <Link href={`/constructors/${r.constructorId}/`} className="text-zinc-400 text-xs hover:text-zinc-300 transition-colors">
-                      {r.constructor}
-                    </Link>
-                  </td>
-                  <td className="py-2.5 text-zinc-300 text-right font-mono text-xs">{r.time ?? "—"}</td>
-                  <td className="py-2.5 text-right font-bold text-white">{Number(r.points) > 0 ? Number(r.points).toFixed(0) : ""}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </span>
+                  <span>·</span>
+                  <Link href={`/constructors/${r.constructorId}/`} className="hover:text-zinc-300 transition-colors">
+                    {r.constructor}
+                  </Link>
+                  <span>·</span>
+                  <span className="font-mono">{r.time ?? "—"}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Milestones */}
@@ -179,7 +222,7 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
       {sprintResults.length > 0 && (
         <>
           <h2 className="text-lg font-bold text-white mb-4">Sprint Result</h2>
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
@@ -202,6 +245,25 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="sm:hidden divide-y divide-zinc-800/60">
+            {sprintResults.map((r, i) => (
+              <div key={i} className="py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold text-white w-6 shrink-0">{r.place}</span>
+                    <span className="text-white font-medium truncate">{r.driverName}</span>
+                  </div>
+                  <span className="font-bold text-white shrink-0">{Number(r.points) > 0 ? Number(r.points).toFixed(0) : ""}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1 pl-8">
+                  <span>{r.constructor}</span>
+                  <span>·</span>
+                  <span className="font-mono">{r.time ?? "—"}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
