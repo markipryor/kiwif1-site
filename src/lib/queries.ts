@@ -747,16 +747,24 @@ export async function getRaceResults(raceId: number): Promise<RaceResult[]> {
   `, [raceId]);
 }
 
-export async function getRacePole(raceId: number): Promise<{ time: string } | null> {
-  const rows = await query<{ time: string }>(`
-    SELECT time FROM poletimes WHERE grandprix_id = ?
+export async function getRacePole(raceId: number): Promise<{ time: string; driverName: string; driverId: number } | null> {
+  // poletimes has no driver_id of its own -- the pole-sitter is whoever
+  // started from grid 1, same convention already used elsewhere in this
+  // file (see the winsFromPole-style queries joining poletimes to
+  // results.grid = '1').
+  const rows = await query<{ time: string; driverName: string; driverId: number }>(`
+    SELECT pt.time, CONCAT(d.firstName, ' ', d.surname) AS driverName, d.id AS driverId
+    FROM poletimes pt
+    JOIN results r ON r.grandprix_id = pt.grandprix_id AND r.grid = '1'
+    JOIN drivers d ON r.driver_id = d.id
+    WHERE pt.grandprix_id = ?
   `, [raceId]);
   return rows[0] ?? null;
 }
 
 export async function getRaceFastestLap(raceId: number) {
-  const rows = await query<{ driverName: string; time: string; lap: number }>(`
-    SELECT CONCAT(d.firstName, ' ', d.surname) AS driverName, fl.time, fl.lap
+  const rows = await query<{ driverName: string; driverId: number; time: string; lap: number }>(`
+    SELECT CONCAT(d.firstName, ' ', d.surname) AS driverName, d.id AS driverId, fl.time, fl.lap
     FROM fastestlaps fl
     JOIN drivers d ON fl.driver_id = d.id
     WHERE fl.grandprix_id = ?
