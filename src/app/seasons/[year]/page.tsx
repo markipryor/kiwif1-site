@@ -64,6 +64,13 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
         </div>
       </div>
 
+      <div className="flex items-center gap-4 mb-6 text-sm">
+        <a href="#driver-standings" className="text-zinc-500 hover:text-white transition-colors">Driver Standings ↓</a>
+        {constructorStandings.length > 0 && (
+          <a href="#constructor-standings" className="text-zinc-500 hover:text-white transition-colors">Constructor Standings ↓</a>
+        )}
+      </div>
+
       <div className="mt-0 mb-10">
         <p className="text-red-500 text-xs font-semibold tracking-widest uppercase mb-1">Season</p>
         <div className="flex items-center gap-3 flex-wrap">
@@ -76,7 +83,9 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
 
       {/* Race calendar */}
       <h2 className="text-lg font-bold text-white mb-4">Race Calendar</h2>
-      <div className="overflow-x-auto">
+      {/* sm and up: full table. Below sm: stacked cards -- same responsive-
+          breakpoint approach used on the race detail page's result tables. */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
@@ -127,10 +136,47 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
           </tbody>
         </table>
       </div>
+
+      <div className="sm:hidden divide-y divide-zinc-800/60">
+        {races.map((r, i) => {
+          const winner = winnerMap.get(r.id);
+          return (
+            <div key={r.id} className="py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-zinc-500 font-mono text-xs shrink-0">{i + 1}</span>
+                  <Link href={`/races/${r.id}/`} className="text-white font-medium text-sm hover:text-red-400 transition-colors truncate">
+                    {r.shortTitle}
+                  </Link>
+                  {r.sprint ? <span className="text-[10px] bg-purple-900/50 text-purple-300 border border-purple-700/40 px-1.5 py-0.5 rounded-full shrink-0">Sprint</span> : null}
+                </div>
+                <span className="text-white font-bold text-xs shrink-0">
+                  {new Date(r.date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+                </span>
+              </div>
+              <div className="pl-6 mt-0.5 text-xs">
+                {winner ? (
+                  <>
+                    🏁 <Link href={`/drivers/${winner.driverId}/`} className="text-zinc-300 hover:text-white transition-colors">
+                      {winner.driverName}
+                    </Link>
+                    <span className="text-zinc-600"> · </span>
+                    <Link href={`/constructors/${winner.constructorId}/`} className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                      {winner.constructor}
+                    </Link>
+                  </>
+                ) : (
+                  <span className="text-zinc-600 italic">Pending</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
       {/* Driver standings */}
-      <div className="flex items-center gap-3 mb-4 mt-12">
+      <div id="driver-standings" className="flex items-center gap-3 mb-4 mt-12 scroll-mt-20">
         <h2 className="text-lg font-bold text-white">{isComplete ? "Driver Standings" : "Driver Standings (In Progress)"}</h2>
-        <span className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-400 px-2.5 py-1 rounded-full font-mono shrink-0">
+        <span className="hidden sm:inline-block text-xs bg-zinc-800 border border-zinc-700 text-zinc-400 px-2.5 py-1 rounded-full font-mono shrink-0">
           {pointsSystem(y)}
         </span>
       </div>
@@ -142,6 +188,7 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
               <Link href={`/drivers/${d.driverId}/`} className="text-white font-semibold text-sm hover:text-red-400 transition-colors">
                 {d.name}
               </Link>
+              {Number(d.wins) > 0 && <span className="sm:hidden text-zinc-500 text-xs"> · {d.wins} win{Number(d.wins) !== 1 ? "s" : ""}</span>}
               <p className="text-zinc-500 text-xs">
                 {d.excluded && <span className="text-zinc-600 mr-1">Excluded from championship ·</span>}
                 <Link href={`/constructors/${d.constructorId}/`} className="hover:text-zinc-300 transition-colors">
@@ -171,7 +218,7 @@ export default async function SeasonPage({ params }: { params: Promise<{ year: s
       {/* Constructor standings */}
       {constructorStandings.length > 0 && (
         <>
-          <h2 className="text-lg font-bold text-white mb-4">{isComplete ? "Constructor Standings" : "Constructor Standings (In Progress)"}</h2>
+          <h2 id="constructor-standings" className="text-lg font-bold text-white mb-4 scroll-mt-20">{isComplete ? "Constructor Standings" : "Constructor Standings (In Progress)"}</h2>
           <div className="space-y-2 mb-12">
             {constructorStandings.map((c) => (
               <div key={c.constructorId} className={`border rounded-lg px-4 py-3 flex items-center gap-4 ${c.excluded ? "bg-zinc-950 border-zinc-700 opacity-60" : "bg-zinc-900 border-zinc-800"}`}>
